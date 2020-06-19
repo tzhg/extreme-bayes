@@ -1,0 +1,14 @@
+.idea
+.spyproject/config
+__pycache__
+venv
+data/ws.csv
+data/d.csv
+other.py
+sanstitre.py
+report/other.tex
+report/report.aux
+report/report.bbl
+report/report.blg
+report/report.log
+report/report.syntex.gz.log
