@@ -1,0 +1,2 @@
+\metro{$\mu^{\text{new}}\sim{\cal N}(\mu^{\text{old}}, 250^2)$,\quad$\log\sigma^{\text{new}}\sim{\cal N}(\log\sigma^{\text{old}}, 3^2)$,\quad$\xi^{\text{new}}\sim{\cal N}(\xi^{\text{old}}, 0.6^2)$}{50,\quad1.5,\quad0.5}{$100,\!000$ (after burn-in of $1,\!000$)}{../plots/pd-P6-prior-trace.pdf}{../plots/pd-P6-prior-hist.pdf}{0.283,\quad0.145,\quad0.202}{-113.74,\quad3.245,\quad0.248}
+
