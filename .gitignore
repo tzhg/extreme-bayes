@@ -5,7 +5,7 @@ venv
 data/ws.csv
 data/d.csv
 other.py
-sanstitre.py
+sanstitre1.py
 report/other.tex
 report/report.aux
 report/report.bbl
