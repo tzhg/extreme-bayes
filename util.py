@@ -567,7 +567,7 @@ def draw_list_priors_marginals(
                     DiscreteDist(
                         len(I),
                         getattr(prior, m)[para]["marginal"][i],
-                        [floor(2000.0 ** (1 / len(I))) for _ in I],
+                        [floor(1000.0 ** (1 / len(I))) for _ in I],
                         [support[para][j] for j in I],
                         log=True)
                     if getattr(prior, m)["proper"] else None
