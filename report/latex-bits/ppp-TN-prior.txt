@@ -1,0 +1,2 @@
+\metro{$\mu^*\sim{\cal N}(\mu,20^2)$,\quad$\log\sigma^*\sim{\cal N}(\log\sigma,0.5^2)$,\quad$\xi^*\sim{\cal N}(\xi,0.1^2)$}{$25$,\quad$0.2$,\quad$0.25$}{$10,\!000$ (after burn-in period of $1,\!000$)}{plots/ppp-TN-prior-trace.pdf}{plots/ppp-TN-prior-hist.pdf}{$0.144$,\quad$0.119$,\quad$0.124$}{$24.018$,\quad$1.673$,\quad$0.187$}
+

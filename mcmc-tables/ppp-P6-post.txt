@@ -1,2 +1,0 @@
-\metro{$\mu^{\text{new}}\sim{\cal N}(\mu^{\text{old}}, 4^2)$,\quad$\log\sigma^{\text{new}}\sim{\cal N}(\log\sigma^{\text{old}}, 0.5^2)$,\quad$\xi^{\text{new}}\sim{\cal N}(\xi^{\text{old}}, 0.5^2)$}{26,\quad1.8,\quad0.15}{$100,\!000$ (after burn-in of $1,\!000$)}{../plots/ppp-P6-post-trace.pdf}{../plots/ppp-P6-post-hist.pdf}{0.185,\quad0.243,\quad0.272}{25.587,\quad1.847,\quad0.257}
-

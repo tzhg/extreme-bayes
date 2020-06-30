@@ -1,2 +1,0 @@
-\metro{$\mu^{\text{new}}\sim{\cal N}(\mu^{\text{old}}, 30^2)$,\quad$\log\sigma^{\text{new}}\sim{\cal N}(\log\sigma^{\text{old}}, 0.6^2)$,\quad$\xi^{\text{new}}\sim{\cal N}(\xi^{\text{old}}, 0.2^2)$}{25,\quad0.2,\quad0.25}{$100,\!000$ (after burn-in of $1,\!000$)}{../plots/ppp-ULS-prior-trace.pdf}{../plots/ppp-ULS-prior-hist.pdf}{0.367,\quad0.427,\quad0.402}{-119.536,\quad-26.89,\quad6.62}
-

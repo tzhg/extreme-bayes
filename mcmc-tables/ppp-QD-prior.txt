@@ -1,2 +1,0 @@
-\metro{$\mu^{\text{new}}\sim{\cal N}(\mu^{\text{old}}, 40^2)$,\quad$\log\sigma^{\text{new}}\sim{\cal N}(\log\sigma^{\text{old}}, 1^2)$,\quad$\xi^{\text{new}}\sim{\cal N}(\xi^{\text{old}}, 0.2^2)$}{25,\quad0.2,\quad0.25}{$100,\!000$ (after burn-in of $1,\!000$)}{../plots/ppp-QD-prior-trace.pdf}{../plots/ppp-QD-prior-hist.pdf}{0.288,\quad0.251,\quad0.264}{21.55,\quad1.365,\quad0.234}
-

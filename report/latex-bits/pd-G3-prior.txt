@@ -1,0 +1,2 @@
+\metro{$\mu^*\sim{\cal N}(\mu,40^2)$,\quad$\log\sigma^*\sim{\cal N}(\log\sigma,1.2^2)$,\quad$\xi^*\sim{\cal N}(\xi,0.3^2)$}{$50$,\quad$1.5$,\quad$0.4$}{$10,\!000$ (after burn-in period of $1,\!000$)}{plots/pd-G3-prior-trace.pdf}{plots/pd-G3-prior-hist.pdf}{$0.273$,\quad$0.138$,\quad$0.099$}{$41.863$,\quad$1.227$,\quad$0.464$}
+
