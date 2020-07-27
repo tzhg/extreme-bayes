@@ -63,9 +63,12 @@ pal_dark = (
 def log_transform(log_pdf, g_inv, log_det):
     """
     Transformation of log PDFs.
-    g_inv:   inverse of PDF transformation (function)
-    log_det: log of absolute value of determinant of Jacobian of g_inv
-             (function)
+    ---------------------------------------------------------------------------
+    g_inv:   Inverse of PDF transformation (function).
+    log_det: Log of absolute value of determinant of Jacobian of g_inv
+             (function).
+    ---------------------------------------------------------------------------
+    Returns: Transformed PDF (function).
     """
     
     def new_pdf(X):
@@ -88,7 +91,10 @@ def log_transform(log_pdf, g_inv, log_det):
 def sig_trans(X):
     """
     Transformation (mu, log(sigma), xi) -> (mu, sigma, xi).
-    X: (mu, log(sigma), xi)
+    ---------------------------------------------------------------------------
+    X: List [mu, log(sigma), xi].
+    ---------------------------------------------------------------------------
+    Returns: List [mu, sigma, xi].
     """
     Y = X.copy()
     Y[1] = np.exp(Y[1])
@@ -98,6 +104,10 @@ def sig_trans(X):
 def latex_f(x):
     """
     Formats numbers for LateX.
+    ---------------------------------------------------------------------------
+    x: Number.
+    ---------------------------------------------------------------------------
+    Returns: String.
     """
     s = f"{round(float(x), 3):,}"
     return s.rstrip("0").rstrip(".").replace(",", ",\!")
@@ -114,16 +124,14 @@ class MCMCSample:
             full_cond=None):
         """
         Metropolis-Within-Gibbs algorithm.
-        For each variable, samples from full conditionals if given,
-        otherwise samples from symmetric Normal proposal distributions
+        For each variable, samples from symmetric Normal proposal distributions
         with the given standard deviations.
-        
-        pdf:        log target density
-        init:       vector of initial values
-        prop_sd:    list of sd's of Normal proposal distributions
-        N:          number of iterations
-        _burnin:    number of iterations to throw away
-        full_cond:  list of full conditionals of each variable
+        -----------------------------------------------------------------------
+        pdf:       Log target density (function).
+        init:      List of initial values.
+        prop_sd:   List of sds of normal proposal distributions.
+        N:         Number of iterations.
+        _burnin:   Number of iterations to throw away at the start.
         """
         
         std = time()
@@ -147,23 +155,11 @@ class MCMCSample:
             for j in range(self.no_para):
                 theta_star = theta.copy()
     
-                if full_cond is None or full_cond[j] is None:
-                    # If no full conditional
-                    theta_star[j] = gauss(theta_star[j], prop_sd[j])
-                        
-                    y_star = pdf(theta_star)
+                theta_star[j] = gauss(theta_star[j], prop_sd[j])
                     
-                    accept = y_star - y > np.log(random())
-                else:
-                    compl = theta.copy()
-                    
-                    del compl[j]
-                    
-                    theta_star[j] = full_cond[j](compl)
-                    
-                    y_star = pdf(theta_star)
-                    
-                    accept = True
+                y_star = pdf(theta_star)
+                
+                accept = y_star - y > np.log(random())
                     
                 if accept:
                     theta = theta_star
@@ -205,9 +201,10 @@ class MCMCSample:
             save_name=""):
         """
         Plots trace plot(s) of the variables.
-        para_names: for axis labels
-        col:        colour
-        save_name:  for name of file
+        -----------------------------------------------------------------------
+        para_names: Names of parameters for axis labels.
+        col:        Colour.
+        save_name:  Used to determine filename.
         """
         n = 1000
         
@@ -243,9 +240,10 @@ class MCMCSample:
             save_name=""):
         """
         Draws histogram of the variables.
-        para_names: for axis labels
-        col:        colour
-        save_name:  for name of file
+        -----------------------------------------------------------------------
+        para_names: Names of parameters for axis labels.
+        col:        Colour.
+        save_name:  Used to determine filename.
         """
         nbins = ceil(2.0 * len(self.sample) ** (1.0 / 3.0))
         dim = len(self.sample[0])
@@ -278,7 +276,9 @@ class MCMCSample:
             save_name=""):
         """
         Generates MCMC tables in report.
-        save_name: used to determine path for saving
+        -----------------------------------------------------------------------
+        para_names: Names of parameters for axis labels.
+        save_name:  Used to determine filename.
         """
         
         self.plot_trace(
@@ -336,9 +336,14 @@ class GEVData:
     def __init__(self, u, x, M=None, name=""):
         """
         Data to be modelled by Poisson point process model.
-        u: threshold (float)
-        x: observations
-        M: number of blocks of data (float) (default is number of exceedances)
+        -----------------------------------------------------------------------
+        u:    Threshold (float).
+        x:    List observations.
+        M:    Number of blocks of data (float),
+              default is number of exceedances.
+        name: Label for data.
+        -----------------------------------------------------------------------
+        Returns: GEVData object
         """
         self.u = u
         self.x = np.array(x)
@@ -361,7 +366,11 @@ class GEVData:
     def fit_GEV(self, theta=None, save=False):
         """
         Fits GEV parameters to annual maxima of data using maximum
-        likelihood and draws Q-Q plot.
+        likelihood (if theta is None) and draws Q-Q plot.
+        -----------------------------------------------------------------------
+        theta: Fitted [mu, sigma, xi].
+        -----------------------------------------------------------------------
+        Returns: Fitted [mu, sigma, xi].
         """
         
         block_max = [x for x in self.block_max if x > 0]
@@ -440,6 +449,10 @@ class GEVData:
         """
         Choses a suitable value of M.
         See Sharkey and J. A. Tawn 2017 eqs 12 and 13.
+        -----------------------------------------------------------------------
+        xi: Shape parameter xi.
+        -----------------------------------------------------------------------
+        Returns: GEVData object with suitable value of M.
         """
         l = (xi + 1) * np.log((2 * xi + 3) / (2 * xi + 1))
         m1 = (1 + 2 * xi + l) / (3 + 2 * xi - l)
@@ -456,6 +469,9 @@ class GEVData:
     
     def set_obs_in_year(self, obs_in_year):
         """
+        Sets the number of observations in a year and calculates the
+        empirical quantiles of the annual maxima.
+        -----------------------------------------------------------------------
         obs_in_year: the number of observations in a year.
         """
         self.obs_in_year = obs_in_year
@@ -477,8 +493,13 @@ class GEVData:
     
     def theta_annual(self, X):
         """
-        Reparametrises theta by changing block size to years.
+        Reparametrises theta by changing M to the number of years of data.
         See Sharkey and J. A. Tawn 2017 eq. 5.
+        Must have set obs_in_year first.
+        -----------------------------------------------------------------------
+        X: [mu, sigma, xi].
+        -----------------------------------------------------------------------
+        Returns: Reparametrised [mu, sigma, xi].
         """
     
         rat = self.n / (self.obs_in_year * self.M)
@@ -491,6 +512,11 @@ class GEVData:
         """
         Reparametrises distribution on theta by changing block size to years.
         See Sharkey and J. A. Tawn 2017 eq. g.
+        Must have set obs_in_year first.
+        -----------------------------------------------------------------------
+        X: [mu, sigma, xi].
+        -----------------------------------------------------------------------
+        Returns: Determinant of reparametrisation.
         """
     
         return ((self.obs_in_year * self.M) / self.n) ** -X[2]
@@ -499,8 +525,11 @@ class GEVData:
 def loglik(theta, data):
     """
     Log likelihood of model.
-    theta: (mu, sigma, xi)
-    data:  GEVdata
+    ---------------------------------------------------------------------------
+    theta: [mu, sigma, xi].
+    data:  GEVData.
+    ---------------------------------------------------------------------------
+    Returns: Log likelihood.
     """
     mu, sigma, xi = theta
     
@@ -523,18 +552,25 @@ def loglik(theta, data):
 def logpost(X, log_prior, data):
     """
     Log posterior of (mu, sigma, xi), up to constant.
-    X:         (mu, sigma, xi)
-    log_prior: log prior of X
-    data:      GEVdata
+    ---------------------------------------------------------------------------
+    X:         [mu, sigma, xi].
+    log_prior: Log prior of theta (function).
+    data:      GEVData.
+    ---------------------------------------------------------------------------
+    Returns: Log posterior.
+
     """
     return log_prior(X) + loglik(X, data)
 
 
 def quantile(X, p):
     """
-    p-quantile of GEV distribution (inverse of CDF).
-    X: parameters (mu, sigma, xi)
-    p: probability p
+    p-quantile of GEV distribution with parameters X (inverse of CDF).
+    ---------------------------------------------------------------------------
+    X: [mu, sigma, xi].
+    p: Probability p.
+    ---------------------------------------------------------------------------
+    Returns: p-quantile
     """
     mu, sigma, xi = X
     
@@ -550,12 +586,14 @@ def quantile(X, p):
 def sample_ret_level(sample, x):
     """
     Estimates return level for sample at return period x.
-    sample: numpy array
-    x:      return period (years)
-    returns: [
+    ---------------------------------------------------------------------------
+    sample: Numpy 1d array of samples.
+    x:      Return period (years).
+    ---------------------------------------------------------------------------
+    Returns: [
         mean return level,
         0.05-quantile return level,
-        0.95-quantile return level]
+        0.95-quantile return level].
     """
     l = [quantile(theta, 1.0 - 1.0 / x) for theta in sample]
     return [np.mean(l, 0), np.quantile(l, 0.05), np.quantile(l, 0.95)]
@@ -568,14 +606,15 @@ def discretise(
         support):
     """
     Discretises PDF for graphing purposes.
-    dim:             number of dimensions of distribution (int)
-    pdf:             (log) PDF which inputs a list of floats and outputs a
-                     float (function) or discrete PDF (numpy ndarray)
-    steps:           steps in the discretisation (int)
-    support:         finite support (list of [float, float])
-    Returns:         Dict with
+    ---------------------------------------------------------------------------
+    dim:     Number of dimensions of distribution (int).
+    pdf:     log PDF (function: list -> float).
+    steps:   Steps in the discretisation (int).
+    support: Finite support (list of [float, float]).
+    ---------------------------------------------------------------------------
+    Returns: {
         X: grid of points in support
-        Y: PDF of grid
+        Y: PDF of X}
     """
     
     X = np.array([
@@ -606,11 +645,18 @@ def draw_list_priors_marginals(
         support,
         save=False):
     """
-    Draws all 1 and 2-dim marginals of a list of priors.
-    list_priors: list of PriorTheta
-    support: support of parameters in list_priors
+    Draws all 1-dim marginals of a list of priors.
+    ---------------------------------------------------------------------------
+    list_priors: List of PriorTheta.
+    support:     Support of parameters in list_priors:
+                 {
+                     theta: {
+                         prior: [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]],
+                         post:  [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]]},
+                     q: {
+                         prior: [[q11, q12], [q21, q22], [q31, q32]],
+                         post:  [[q11, q12], [q21, q22], [q31, q32]]}}
     """
-    
         
     para_names = {
         "q": [r"$q_1$", r"$q_2$", r"$q_3$"],
@@ -688,39 +734,6 @@ def draw_list_priors_marginals(
                             d["Y"],
                             pal[colr[h[0]][h[1]]],
                             linestyle=linestyle[m])
-                        
-                   # else:
-                        # Bivariate
-                        # grid = np.meshgrid(
-                        #     *d["X"],
-                        #     indexing="ij")
-                        # ax.contour(
-                        #     *grid,
-                        #     d["Y"],
-                        #     colors=pal[colr[m]])
-                        
-                        # # Diagonal shaded area
-                        # if para == "q":
-                        #     diag = [
-                        #         max([support["q"][j][0] for j in I]),
-                        #         min([support["q"][j][1] for j in I])]
-                            
-                        #     ax.fill_between(
-                        #         diag,
-                        #         diag,
-                        #         diag[0] - 10,
-                        #         alpha=0.1,
-                        #         color="k")
-                        
-                        # # Proxy used to detect lines for legend
-                        # ax.plot(
-                        #     support[para][I[0]][0],
-                        #     support[para][I[1]][0],
-                        #     pal[colr[m]])
-                        
-                        # ax.set(
-                        #     xlim=tuple(support[para][I[0]]),
-                        #     ylim=tuple(support[para][I[1]]))
             
             # Joining plots together
             fig.subplots_adjust(hspace=0)
@@ -743,21 +756,19 @@ def draw_list_priors_marginals(
 def plot_return_level(
         list_priors,
         analytic_rl=None,
-        simul_rl=None,
         save=False):
     """
     Plots estimated return level.
-    prior:       prior (PriorTheta)
-    analytic_rl: draws analytic return level
-    simul_rl:    draws empirical return level
-    ylim:        sets the upper y-axis limit
+    ---------------------------------------------------------------------------
+    list_priors: List of PriorTheta.
+    analytic_rl: List [X, Y] of some return level.
     """
     N = 100
     X = np.logspace(0.0001, 4.0, num=N)
     
     colr = [0, 2, 1, 3]
     
-    # Finds maximum y axis value
+    # Finds maximum y-axis value
     _max = 0
     for prior in list_priors:
         x = np.array([
@@ -771,13 +782,6 @@ def plot_return_level(
 
     if analytic_rl is not None:
         ax.plot(*analytic_rl, "k")
-        
-    if simul_rl is not None:
-        n = int(np.shape(simul_rl)[1] / 1000)
-        ax.plot(
-            *simul_rl[:, n * (1000 - 600):n * (1000 - 1)],
-            color="k",
-            linestyle="dashed")
         
     for i, prior in enumerate(list_priors):		
         Y = np.array([
@@ -800,13 +804,6 @@ def plot_return_level(
             Y[:, 2],
             color=pal[colr[i]],
             linestyle="dashed")
-        
-        # plt.fill_between(
-        #     X,
-        #     Y[:, 1],
-        #     Y[:, 2],
-        #     alpha=0.2,
-        #     facecolor=pal[colr[i]])
         
     ax.scatter(*list_priors[0].post["data"].emp_quant, s=10, color="k")
         
@@ -837,10 +834,12 @@ def vary_threshold(
     """
     Varies the threshold and produces plot of return level
     estimates for three years.
-    no_exceeds: list of no of exceedances
-    priors:     list of identical priors
-    data:       GEVdata
-    emp_rl:     empirical quantiles from large sample
+    ---------------------------------------------------------------------------
+    u_list:   List of thresholds to test.
+    priors:   List of identical priors.
+    inits:    MCMC initialisations.
+    prop_sds: MCMC normal proposal sds.
+    data:     GEVData.
     """
     for i in range(len(u_list)):
         data2 = GEVData(u_list[i], data.x)
@@ -901,13 +900,16 @@ def poisson_point_process(
     """
     Simulates Poisson point process with 1 expected exceedance per block
     and number of blocks equal to number of exceedances.
-    Returns GEVData.
-    para:              parameters (mu, sigma, xi)
-    n:                 number of observations (int)
-    no_exceed:         number of exceedances (int)
-    load:              loads data
-    save:              saves data
-    name:              name of the data
+    ---------------------------------------------------------------------------
+    para:      [mu, sigma, xi].
+    n:         Number of observations (int).
+    no_exceed: Number of exceedances (int).
+    load:      Loads data.
+    save:      Saves data.
+    filename:  Used to determine filename.
+    name:      Label for the data.
+    ---------------------------------------------------------------------------
+    Returns: GEVData.
     """
     mu, sigma, xi = para
     
@@ -936,8 +938,12 @@ def poisson_point_process(
 
 def load_data(filename):
     """
-    Loads data in csv format, with one column and no header row.
-    Returns: List
+    Loads data in csv format, with one column and no header row,
+    from Data folder.
+    ---------------------------------------------------------------------------
+    filename: Filename of csv file.
+    ---------------------------------------------------------------------------
+    Returns:  List.
     """
     
     with open("data\%s.csv" % filename, newline="") as csvfile:
@@ -950,9 +956,12 @@ def load_data(filename):
 def tn_para(m, V):
     """
     Converts mean and variance to truncated normal parameters.
-    m: mean
-    V: variance
-    Outputs: (parent mean, parent standard deviation)
+    Only works for small enough variances.
+    ---------------------------------------------------------------------------
+    m: mean of TN distribution
+    V: variance of TN distribution
+    ---------------------------------------------------------------------------
+    Returns: (parent mean, parent standard deviation)
     """
     def hazard(x):
         return norm.pdf(x) / norm.sf(x)
@@ -980,7 +989,15 @@ def tn_para(m, V):
 
 def para_for_quantiles(para_tn):
     """
-    para_tn: [parent mean, parent standard deviation]
+    Given parameters for TN distribution of quantile differences,
+    computes distribution of quantiles,
+    and finds TN distributions which best approximate these distributions.
+    ---------------------------------------------------------------------------
+    para_tn: Parameters of distribution of quantile differences
+             [parent mean, parent standard deviation]
+    ---------------------------------------------------------------------------
+    Returns: Parameters of distribution of quantiles
+             [parent mean, parent standard deviation]
     """
     # TN
     

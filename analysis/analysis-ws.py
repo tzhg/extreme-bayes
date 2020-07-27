@@ -29,8 +29,10 @@ data = util.GEVData(u, data_raw, name=study_name)
 
 data.draw(save=save_all)
 
+# Fits GEV model
 theta = data.fit_GEV(save=True)
 
+# Chooses optimal value of M
 data = data.optimal_M(theta[2])
 
 # There are 212 days from November to May
@@ -43,8 +45,8 @@ p = np.array([0.1, 0.01, 0.001])
     
 pi = priors.all_priors(
     p,
-    [26.45, 33.636, 48],
-    var=27,
+    qu=[26.45, 33.636, 48],
+    var=[27] * 3,
     name=study_name)
 
 # MCMC sampling #-------------------------------------------------------------#

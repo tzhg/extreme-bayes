@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jul 22 09:43:39 2020
-
-@author: tonyz
+Jeffreys prior
 """
+
 import util
 
 import numpy as np

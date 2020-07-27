@@ -13,13 +13,14 @@ class PriorTheta:
     def __init__(
             self,
             pdf,
-            full_cond={"prior": None, "post": None},
             inst_name=""):
         """
         Prior for (mu, sigma, xi).
-        pdf:       PDF of prior for (mu, sigma, xi)
-        full_cond: full conditionals for MCMC algorithm
-        inst_name: name for a specific instance of a prior
+        -----------------------------------------------------------------------
+        pdf:       Prior PDF (function).
+        inst_name: Label.
+        -----------------------------------------------------------------------
+        Returns: PriorTheta object.
         """
         self.inst_name = inst_name
         
@@ -35,7 +36,6 @@ class PriorTheta:
             "proper": True}
             
         self.pdf = pdf
-        self.full_cond = full_cond
         
             
     def get_samples(
@@ -45,16 +45,16 @@ class PriorTheta:
             prop_sd,
             p,
             data=None,
-            save=False,
-            full_cond=None):
+            save=False):
         """
         MCMC algorithm for sampling theta and q with log(sigma) parametrisation
         from prior or posterior.
-        typ:     "prior" or "post"
-        init:    initialisation for MCM algorithm
-        prop_sd: proposal standard deviations for MCMC algorithm
-        p:       (p_1, p_2, p_3)
-        data:    GEVdata for posterior
+        -----------------------------------------------------------------------
+        typ:     "prior" or "post".
+        init:    Initialisation for MCMC algorithm.
+        prop_sd: Proposal normal standard deviations for MCMC algorithm.
+        p:       [p_1, p_2, p_3].
+        data:    GEVData for posterior.
         """
         
         # Number of iterations
@@ -90,8 +90,7 @@ class PriorTheta:
             init,
             prop_sd,
             N,
-            burnin,
-            full_cond=full_cond)
+            burnin)
         
         mcmc_obj.results(
             para_names=[
@@ -129,6 +128,8 @@ class PriorTheta:
         Generates marginal PDFs of theta and (q1, q2, q3), for prior and
         posterior distributions.
         If there exist samples, uses KDE.
+        For priors on (q1, q2, q3), uses openturns.
+        -----------------------------------------------------------------------
         bw_method: bandwidth method (see SciPy documentation)
         """
                 
@@ -179,14 +180,18 @@ class PriorTheta:
 class PriorQ(PriorTheta):
     def __init__(self, p, hyperpara, para, inst_name=""):
         """
-        Prior on some quantiles/quantile differences
-        p: probabilities [p_1, p_2, p_3] (np.ndarray)
+        Prior from specification of quantiles or quantile differences.
+        -----------------------------------------------------------------------
+        p:         probabilities [p_1, p_2, p_3] (np.ndarray).
         hyperpara: list [x, y]:
-            x: 2 (k = 2) or 3 (k = 3)
-            y: "i" (independent copula) or "me" (maximum entropy copula)
-        para: 2d numpy array, whose i-th row are parameters
-            [parent mean, parent standard deviation]
-            of the i-th marginal.
+                   x: 2 (k = 2) or 3 (k = 3)
+                   y: "i" (independent copula) or
+                      "me" (maximum entropy copula).
+        para:      2d numpy array, whose i-th row are parameters
+                   [parent mean, parent standard deviation]
+                   of the i-th marginal.
+        -----------------------------------------------------------------------
+        Returns: PriorTheta.
         """
         
         self.hyperpara = hyperpara
@@ -332,11 +337,14 @@ def all_priors(
         var,
         name=""):
     """
-    Returns a list of all priors.
-    p:            (p_1, p_2, p_3)
-    qu:           estimate of (q_1, q_2, q_3)
-    var:          variance of quantiles
-    name:         gives names for the priors
+    Returns a list of all four priors. See Section 3.4.
+    ---------------------------------------------------------------------------
+    p:    [p_1, p_2, p_3] (1d numpy array).
+    qu:   Estimate of (q_1, q_2, q_3).
+    var:  Variances of quantile differences.
+    name: Label.
+    ---------------------------------------------------------------------------
+    Returns: List of all four priors.
     """
     
     var = [var] * 3

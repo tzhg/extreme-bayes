@@ -27,6 +27,7 @@ theta = [25.0, 5.0, 0.2]
 n = 19710
 no_exceed = 86
 
+# Generates/loads data
 data = util.poisson_point_process(
     theta,
     n=n,
@@ -37,6 +38,7 @@ data = util.poisson_point_process(
 
 data.draw(save=save_all)
 
+# Chooses optimal value of M
 data = data.optimal_M(theta[2])
 
 # Plots fit of annual maxima
@@ -51,8 +53,8 @@ p = np.array([0.1, 0.01, 0.001])
 
 pi = priors.all_priors(
     p,
-    util.quantile(theta, 1.0 - p),
-    27,
+    qu=util.quantile(theta, 1.0 - p),
+    var=[27] * 3,
     name=study_name)
 
 # MCMC sampling #-------------------------------------------------------------#
@@ -123,7 +125,6 @@ analytic_rl = [X, Y]
 util.plot_return_level(
     pi,
     analytic_rl=analytic_rl,
-    simul_rl=None,
     save=save_all)
     
 print("%s: %f min" % (study_name, (time() - time0) / 60.0))
