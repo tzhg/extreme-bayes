@@ -1,2 +1,2 @@
-\metro{$\tilde{\mu}^*\sim{\cal N}(\tilde{\mu},3^2)$,\quad$\log\tilde{\sigma}^*\sim{\cal N}(\log\tilde{\sigma},0.4^2)$,\quad$\tilde{\xi}^*\sim{\cal N}(\tilde{\xi},0.15^2)$}{$25$,\quad$2$,\quad$0.2$}{$500,\!000$ (after burn-in period of $1,\!000$)}{plots/ppp-3-me-post-trace.pdf}{plots/ppp-3-me-post-hist.pdf}{$0.242$,\quad$0.232$,\quad$0.204$}{$24.489$,\quad$1.71$,\quad$0.185$}
+\metro{$\tilde{\mu}^*\sim{\cal N}(\tilde{\mu},4^2)$,\quad$\log\tilde{\sigma}^*\sim{\cal N}(\log\tilde{\sigma},0.5^2)$,\quad$\tilde{\xi}^*\sim{\cal N}(\tilde{\xi},0.15^2)$}{$25$,\quad$1.75$,\quad$0.2$}{$500,\!000$ (after burn-in period of $1,\!000$)}{plots/ppp-3-me-post-trace.pdf}{plots/ppp-3-me-post-hist.pdf}{$0.187$,\quad$0.189$,\quad$0.202$}{$24.49$,\quad$1.708$,\quad$0.186$}
 

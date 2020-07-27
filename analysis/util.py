@@ -120,8 +120,7 @@ class MCMCSample:
             init,
             prop_sd,
             N,
-            _burnin,
-            full_cond=None):
+            _burnin):
         """
         Metropolis-Within-Gibbs algorithm.
         For each variable, samples from symmetric Normal proposal distributions
@@ -196,14 +195,14 @@ class MCMCSample:
     def plot_trace(
             self,
             para_names=["", "", ""],
-            col=pal[0],
+            colour=pal[0],
             save=False,
             save_name=""):
         """
         Plots trace plot(s) of the variables.
         -----------------------------------------------------------------------
         para_names: Names of parameters for axis labels.
-        col:        Colour.
+        colour:     Colour of plot.
         save_name:  Used to determine filename.
         """
         n = 1000
@@ -219,7 +218,7 @@ class MCMCSample:
             cell.plot(
                 np.array(range(n)) * k,
                 [np.transpose(self.sample)[i][j * k] for j in range(n)],
-                pal[0])
+                colour)
             
             cell.grid()
             cell.set(ylabel=para_names[i])
@@ -235,14 +234,14 @@ class MCMCSample:
     def sample_hist(
             self,
             para_names=["", "", ""],
-            col=pal[0],
+            colour=pal[0],
             save=False,
             save_name=""):
         """
         Draws histogram of the variables.
         -----------------------------------------------------------------------
         para_names: Names of parameters for axis labels.
-        col:        Colour.
+        colour:     Colour of plot.
         save_name:  Used to determine filename.
         """
         nbins = ceil(2.0 * len(self.sample) ** (1.0 / 3.0))
@@ -256,7 +255,7 @@ class MCMCSample:
             cell.hist(
                 self.sample[:, i],
                 density=True,
-                color=pal[0],
+                color=colour,
                 bins=nbins)
             
             cell.grid()
@@ -272,6 +271,7 @@ class MCMCSample:
     def results(
             self,
             para_names=["", "", ""],
+            colour=0,
             save=False,
             save_name=""):
         """
@@ -283,13 +283,13 @@ class MCMCSample:
         
         self.plot_trace(
             para_names,
-            col=pal[0],
+            colour=pal[colour],
             save=save,
             save_name="%s-trace" % save_name)
         
         self.sample_hist(
             para_names,
-            col=pal[0],
+            colour=pal[colour],
             save=save,
             save_name="%s-hist" % save_name)
         
@@ -661,18 +661,6 @@ def draw_list_priors_marginals(
     para_names = {
         "q": [r"$q_1$", r"$q_2$", r"$q_3$"],
         "theta": [r"$\mu$", r"$\log\sigma$", r"$\xi$"]}
-            
-    # Determines colour of lines            
-    colr = [
-        None,
-        None,
-        {
-            "i": 2,
-            "me": 3},
-        
-        {
-            "i": 0,
-            "me": 1}]
          
     linestyle = {
         "prior": "dashed",
@@ -726,13 +714,10 @@ def draw_list_priors_marginals(
                     
                     if len(I) == 1:
                         # Univariate
-                        
-                        h = prior.hyperpara
-                    
                         ax.plot(
                             d["X"][0],
                             d["Y"],
-                            pal[colr[h[0]][h[1]]],
+                            pal[prior.colour],
                             linestyle=linestyle[m])
             
             # Joining plots together
@@ -763,10 +748,8 @@ def plot_return_level(
     list_priors: List of PriorTheta.
     analytic_rl: List [X, Y] of some return level.
     """
-    N = 100
+    N = 50
     X = np.logspace(0.0001, 4.0, num=N)
-    
-    colr = [0, 2, 1, 3]
     
     # Finds maximum y-axis value
     _max = 0
@@ -791,18 +774,18 @@ def plot_return_level(
         ax.plot(
             X,
             Y[:, 0],
-            color=pal[colr[i]])
+            color=pal[prior.colour])
         
         ax.plot(
             X,
             Y[:, 1],
-            color=pal[colr[i]],
+            color=pal[prior.colour],
             linestyle="dashed")
                 
         ax.plot(
             X,
             Y[:, 2],
-            color=pal[colr[i]],
+            color=pal[prior.colour],
             linestyle="dashed")
         
     ax.scatter(*list_priors[0].post["data"].emp_quant, s=10, color="k")

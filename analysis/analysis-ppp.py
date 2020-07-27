@@ -65,14 +65,14 @@ for i in range(4):
         pi[i].get_samples(
             "prior",
             [
-                [25.0, 2.0, 0.2], # 3P I
+                [25.0, 2.0, 0.2], # k = 3, I copula
                 None,
-                [25.0, 2.0, 0.0], # 3P ME
+                [25.0, 2.0, 0.0], # k = 3, ME copula
                 None][i],
             [   
-                [25.0, 1.0, 0.2], # 3P I
+                [30.0, 1.0, 0.2], # k = 3, I copula
                 None,
-                [25.0, 0.5, 0.1], # 3P ME
+                [25.0, 0.6, 0.2], # k = 3, ME copula
                 None][i],
             p,
             save=save_all)
@@ -81,15 +81,15 @@ for i in range(4):
         pi[i].get_samples(
             "post",
             [
-                [25.0, 2.0, 0.2], # 3P I
-                [25.0, 2.0, 0.2], # 2P I
-                [25.0, 2.0, 0.2], # 3P ME
-                [25.0, 2.0, 0.2]][i], # 2P ME
+                [25.0, 1.75, 0.2],     # k = 3, I copula
+                [25.0, 1.75, 0.2],     # k = 2, I copula
+                [25.0, 1.75, 0.2],     # k = 3, ME copula
+                [25.0, 1.75, 0.2]][i], # k = 2, ME copula
             [
-                [3.0, 0.45, 0.25], # 3P I
-                [3.0, 0.5, 0.4], # 2P I
-                [3.0, 0.4, 0.15], # 3P ME
-                [3.0, 0.5, 0.4]][i], # 2P ME
+                [4.0, 0.45, 0.25],     # k = 3, I copula
+                [4.0, 0.6, 0.4],       # k = 2, I copula
+                [4.0, 0.5, 0.15],      # k = 3, ME copula
+                [4.0, 0.6, 0.4]][i],   # k = 2, ME copula
             p,
             data=data,
             save=save_all)

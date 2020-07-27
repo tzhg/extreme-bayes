@@ -13,15 +13,19 @@ class PriorTheta:
     def __init__(
             self,
             pdf,
+            colour,
             inst_name=""):
         """
         Prior for (mu, sigma, xi).
         -----------------------------------------------------------------------
         pdf:       Prior PDF (function).
+        colour:    Index of some colour in util.pal.
         inst_name: Label.
         -----------------------------------------------------------------------
         Returns: PriorTheta object.
         """
+        
+        self.colour = colour
         self.inst_name = inst_name
         
         # Stores whether the univariate marginals are proper distributions        
@@ -70,17 +74,8 @@ class PriorTheta:
             prior = lambda X: self.pdf(X) * data.theta_annual_det(X)
             
             target = lambda X: util.logpost(X, prior, data)
-            
-            if self.full_cond[typ] is None:
-                fc = None
-            else:
-                fc = self.full_cond[typ].copy()
-                for i, f in enumerate(self.full_cond["post"]):
-                    if f is not None:
-                        fc[i] = lambda X: f(X, data)
         else:
             target = self.pdf
-            fc = self.full_cond["prior"]
             
         # Transformation sigma -> log(sigma)
         new_target = util.log_transform(target, util.sig_trans, lambda X: X[1])
@@ -97,6 +92,7 @@ class PriorTheta:
                 r"$\tilde{\mu}$",
                 r"$\log\tilde{\sigma}$",
                 r"$\tilde{\xi}$"],
+            colour=self.colour,
             save=save,
             save_name="%s-%s-%s-%s" % (
                 self.inst_name,
@@ -199,8 +195,21 @@ class PriorQ(PriorTheta):
         
         s = -np.log(-np.log(1.0 - p))
         
-        if hyperpara[1] == "i":
-            if hyperpara[0] == 3:
+        k, cop = hyperpara
+        
+        # Sets colour
+        colour = [
+            None,
+            None,
+            {
+                "i": 2,
+                "me": 3},
+            {
+                "i": 0,
+                "me": 1}][k][cop]
+        
+        if cop == "i":
+            if k == 3:
                 def f(X):
                     q1, q2, q3 = X
                     
@@ -210,7 +219,7 @@ class PriorQ(PriorTheta):
                         return None
                     
                     return -0.5 * np.sum(((Y - para[:, 0]) / para[:, 1]) ** 2)
-            elif hyperpara[0] == 2:
+            elif k == 2:
                 def f(X):
                     sigma, q1, q2 = X
                     
@@ -225,10 +234,10 @@ class PriorQ(PriorTheta):
                     a = -0.5 * np.sum(((Y - para[:, 0]) / para[:, 1]) ** 2)
                     
                     return a - np.log(sigma)
-        elif hyperpara[1] == "me":
-            q_marg = [None for _ in range(hyperpara[0])]
+        elif cop == "me":
+            q_marg = [None for _ in range(k)]
             
-            for i in range(hyperpara[0]):
+            for i in range(k):
                 dist = Normal(para[i, 0], para[i, 1])
                 q_marg[i] = TruncatedDistribution(
                     dist,
@@ -237,7 +246,7 @@ class PriorQ(PriorTheta):
             
             ot = MaximumEntropyOrderStatisticsDistribution(q_marg)
             
-            if hyperpara[0] == 3:
+            if k == 3:
                 def f(X):
                     q1, q2, q3 = X
                     
@@ -250,7 +259,7 @@ class PriorQ(PriorTheta):
                         return None
                     
                     return np.log(Y)
-            elif hyperpara[0] == 2:
+            elif k == 2:
                 def f(X):
                     sigma, q1, q2 = X
                     
@@ -264,7 +273,7 @@ class PriorQ(PriorTheta):
                     
                     return np.log(Y) - np.log(sigma)
         
-        if hyperpara[0] == 3:
+        if k == 3:
             # Transformation (mu, theta, xi) -> (q1, q2, q3)
             def g(X):
                 mu, sigma, xi = X
@@ -297,7 +306,7 @@ class PriorQ(PriorTheta):
                     for i in range(3)]
                     
                 return np.log(sigma) + np.log(sum(sm)) - np.log(xi ** 2.0)
-        elif hyperpara[0] == 2:
+        elif k == 2:
             # Transformation (mu, sigma, xi) -> (sigma, q1, q2)
             def g(X):
                 mu, sigma, xi = X
@@ -325,9 +334,12 @@ class PriorQ(PriorTheta):
             
                 return np.log(sigma) + np.log(abs(e[0] - e[1])) - np.log(xi ** 2.0)
         
-        super().__init__(util.log_transform(f, g, g_det), inst_name=inst_name)
+        super().__init__(
+            util.log_transform(f, g, g_det),
+            colour=colour,
+            inst_name=inst_name)
         
-        if hyperpara[0] == 2:
+        if k == 2:
             self.prior["proper"] = False
     
 
@@ -346,8 +358,6 @@ def all_priors(
     ---------------------------------------------------------------------------
     Returns: List of all four priors.
     """
-    
-    var = [var] * 3
     
     # Means of quantile differences
     qu_diff_m = np.array([qu[0], qu[1] - qu[0], qu[2] - qu[1]])
