@@ -1,2 +1,0 @@
-\metro{$\mu^*\sim{\cal N}(\mu,100^2)$,\quad$\log\sigma^*\sim{\cal N}(\log\sigma,5^2)$,\quad$\xi^*\sim{\cal N}(\xi,1.5^2)$}{$27$,\quad$3.7$,\quad$-0.12$}{$10,\!000$ (after burn-in period of $1,\!000$)}{plots/ws-E-prior-trace.pdf}{plots/ws-E-prior-hist.pdf}{$0.238$,\quad$0.142$,\quad$0.128$}{$-12.189$,\quad$1.589$,\quad$-0.378$}
-

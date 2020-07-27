@@ -5,6 +5,8 @@ Real data: wind speed (ws)
 
 from time import time
 
+import numpy as np
+
 import util, priors
 
 #=============================================================================#
@@ -19,84 +21,91 @@ study_name = "ws"
 # Obtaining data #------------------------------------------------------------#
 #=============================================================================#
 
-ws_data_raw = util.load_data(study_name)
+data_raw = util.load_data(study_name)
 
-ws_M = len(ws_data_raw) / 365.0
-ws_u = 25.0
+u = 21.0
 
-ws_data = util.GEVData(ws_u, ws_data_raw, ws_M, study_name)
+data = util.GEVData(u, data_raw, name=study_name)
 
-ws_data.draw(save=save_all)
+data.draw(save=save_all)
+
+theta = data.fit_GEV(save=True)
+
+data = data.optimal_M(theta[2])
+
+# There are 212 days from November to May
+data.set_obs_in_year(212)
 
 # Constructing priors #-------------------------------------------------------#
 #=============================================================================#
 
-p = [0.1, 0.01, 0.001]
-
-ws_theta = ws_data.fit_GEV(True)
+p = np.array([0.1, 0.01, 0.001])
     
-ws_pi = priors.all_priors(
+pi = priors.all_priors(
     p,
-    0.5,
-    theta=ws_theta,
-    variance=5,
-    name=study_name,
-    save=save_all)
-#%%
+    [26.45, 33.636, 48],
+    var=27,
+    name=study_name)
+
 # MCMC sampling #-------------------------------------------------------------#
 #=============================================================================#
 
-# Set this to i to only sample from the i-th prior.
-# Useful for tuning parameters.
-isolate = None
-
-for i in range(len(ws_pi)):
-    if isolate is not None and i is not isolate:
-        continue
+for i in range(4):
+    if pi[i].prior["proper"]:
+        pi[i].get_samples(
+            "prior",
+            [
+                [25.0, 2, 0], # 3P I
+                None,
+                [25.0, 2, 0], # 3P ME
+                None][i],
+            [   
+                [25.0, 2, 0.6], # 3P I
+                None,
+                [25.0, 2, 0.8], # 3P ME
+                None][i],
+            p,
+            save=save_all)
     
-    ws_pi[i].mcmc(
-        "prior",
-        [27.0, 3.7, -0.12],
-        [
-            [25.0, 3, 1],
-            None,
-            None,
-            [30.0, 5, 1],
-            [100.0, 5, 1.5],
-            [20.0, 2, 0.8]][i],
-        save=save_all)
-    
-    ws_pi[i].mcmc(
-        "post",
-        [27.0, 0.8, 0.15],
-        [
-            [2.0, 0.5, 0.5],
-            [2.0, 0.5, 0.6],
-            [2.0, 0.5, 0.6],
-            [2.0, 0.5, 0.5],
-            [2.0, 0.5, 0.5],
-            [2.0, 0.5, 0.5]][i],
-        data=ws_data,
-        save=save_all)
+    if pi[i].post["proper"]:
+        pi[i].get_samples(
+            "post",
+            [
+                [22.5, 1.0, 0.2], # 3P I
+                [22.5, 1.0, 0.3], # 2P I
+                [22.5, 1.0, 0.1], # 3P ME
+                [22.5, 1.0, 0.4]][i], # 2P ME
+            [
+                [1.0, 0.45, 0.25], # 3P I
+                [1.0, 0.5, 0.4], # 2P I
+                [1.0, 0.4, 0.3], # 3P ME
+                [1.0, 0.5, 0.4]][i], # 2P ME
+            p,
+            data=data,
+            save=save_all)
 
-#%%
-# Visualisation #-------------------------------------------------------------#
+# Plotting marginals #--------------------------------------------------------#
 #=============================================================================#
 
+for prior in pi:
+    prior.set_marginals()
+    
 util.draw_list_priors_marginals(
-    ws_pi,
+    pi,
     support={
-        "q": [[0.0, 50.0], [0.0, 110.0], [0.0, 300.0]],
-        "theta": [[-10.0, 50.0], [-2.0, 4.0], [-0.5, 1]]},
+        "theta": {
+            "prior": [[10.0, 35.0], [-4, 8.0], [-1, 2]],
+            "post": [[20.5, 24], [-1, 6], [-0.15, 1]]},
+        "q": {
+            "prior": [[10.0, 47.50], [10.0, 125.0], [10.0, 125.0]],
+            "post": [[25.0, 47.5], [20.0, 130.0], [0.0, 375.0]]}},
     save=save_all)
 
 # Return level plot #---------------------------------------------------------#
 #=============================================================================#
 
-for i, prior in enumerate(ws_pi):
-    util.plot_return_level(
-        prior,
-        ylim=250,
-        save=save_all)
+util.plot_return_level(
+    pi,
+    save=save_all)
 
 print("%s: %f min" % (study_name, (time() - time0) / 60.0))

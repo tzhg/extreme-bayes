@@ -1,2 +1,0 @@
-\metro{$\mu^*\sim{\cal N}(\mu,2^2)$,\quad$\log\sigma^*\sim{\cal N}(\log\sigma,0.5^2)$,\quad$\xi^*\sim{\cal N}(\xi,0.5^2)$}{$27$,\quad$0.8$,\quad$0.15$}{$10,\!000$ (after burn-in period of $1,\!000$)}{plots/ws-G3-post-trace.pdf}{plots/ws-G3-post-hist.pdf}{$0.182$,\quad$0.198$,\quad$0.149$}{$27.301$,\quad$0.91$,\quad$-0.019$}
-

@@ -7,7 +7,10 @@ from csv import reader
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import genpareto, genextreme
+from scipy.stats import genpareto, genextreme, norm
+from scipy.optimize import root_scalar, minimize
+from openturns import Normal, TruncatedDistribution
+
 
 #=============================================================================#
 
@@ -19,10 +22,8 @@ In functions which save content, there will be a boolean parameter "save"
 which determines whether the content is saved or not.
 If save=True, the content will be saved in the folder with the relative
 path given by save_path.
-Charts are saved in a subfolder "charts",
+Plots are saved in a subfolder "plots",
 Snippets of LateX are saved in a subfolder "latex-bits".
-The LateX snippets are generated in order to avoid rewriting the report each
-time the analysis is rerun. 
 """
 save_path = "../report"
 
@@ -61,7 +62,7 @@ pal_dark = (
 
 def log_transform(log_pdf, g_inv, log_det):
     """
-    Transformation of log PDFs
+    Transformation of log PDFs.
     g_inv:   inverse of PDF transformation (function)
     log_det: log of absolute value of determinant of Jacobian of g_inv
              (function)
@@ -86,7 +87,7 @@ def log_transform(log_pdf, g_inv, log_det):
 
 def sig_trans(X):
     """
-    Transformation (mu, log(sigma), xi) -> (mu, sigma, xi)
+    Transformation (mu, log(sigma), xi) -> (mu, sigma, xi).
     X: (mu, log(sigma), xi)
     """
     Y = X.copy()
@@ -96,7 +97,7 @@ def sig_trans(X):
 
 def latex_f(x):
     """
-    Formats numbers for LateX
+    Formats numbers for LateX.
     """
     s = f"{round(float(x), 3):,}"
     return s.rstrip("0").rstrip(".").replace(",", ",\!")
@@ -137,18 +138,19 @@ class MCMCSample:
         
         y = pdf(theta)
     
-        acc = [0.0 for _ in range(self.no_para)]
+        acc = [[] for _ in range(self.no_para)]
         
         sample = []
       
-        for i in range(N):
+        i = 0
+        while i < N:
             for j in range(self.no_para):
                 theta_star = theta.copy()
     
                 if full_cond is None or full_cond[j] is None:
                     # If no full conditional
                     theta_star[j] = gauss(theta_star[j], prop_sd[j])
-                    
+                        
                     y_star = pdf(theta_star)
                     
                     accept = y_star - y > np.log(random())
@@ -168,19 +170,27 @@ class MCMCSample:
                     y = y_star
         
                     if i >= _burnin:
-                        acc[j] += 1
+                        acc[j].append(1)
+                else:
+                    # theta = theta
+                    # y = y
+                    
+                    if i >= _burnin:
+                        acc[j].append(0)
             
             if i >= _burnin:
                 sample.append(theta)
-        
-        sample = np.array(sample)
-            
-        acc_rate = np.array(acc) / (N - _burnin)
                 
-        print("MCMC: %d samples %s s (%s)" % (
+            i = i + 1
+                
+        sample = np.array(sample)
+        
+        acc_rate = [np.mean(acc[i]) for i in range(self.no_para)]
+        
+        print("%d samples %s s (%s)" % (
             N,
             round(time() - std),
-            ", ".join([latex_f(x) for x in acc_rate])))
+            ", ".join(["%s" % round(x, 3) for x in acc_rate])))
          
         self.sample = sample
         self.acc_rate = acc_rate
@@ -194,14 +204,14 @@ class MCMCSample:
             save=False,
             save_name=""):
         """
-        Plots trace plot(s) of the variables
+        Plots trace plot(s) of the variables.
         para_names: for axis labels
         col:        colour
         save_name:  for name of file
         """
         n = 1000
         
-        fig, ax = plt.subplots(nrows=1, ncols=self.no_para)
+        fig, ax = plt.subplots(nrows=1, ncols=self.no_para, figsize=(7.5, 2))
         k = floor((self.N - self.burnin) / n)
         for i in range(self.no_para):
             if self.no_para == 1:
@@ -216,7 +226,6 @@ class MCMCSample:
             
             cell.grid()
             cell.set(ylabel=para_names[i])
-        fig.set_size_inches(7.5, 2)
         fig.tight_layout()
         if save:
             plt.savefig(
@@ -233,14 +242,14 @@ class MCMCSample:
             save=False,
             save_name=""):
         """
-        Draws histogram of the variables
+        Draws histogram of the variables.
         para_names: for axis labels
         col:        colour
         save_name:  for name of file
         """
         nbins = ceil(2.0 * len(self.sample) ** (1.0 / 3.0))
         dim = len(self.sample[0])
-        fig, ax = plt.subplots(nrows=1, ncols=dim)
+        fig, ax = plt.subplots(nrows=1, ncols=dim, figsize=(7.5, 2))
         for i in range(dim):
             if dim == 1:
                 cell = ax
@@ -254,7 +263,6 @@ class MCMCSample:
             
             cell.grid()
             cell.set(xlabel=para_names[i])
-        fig.set_size_inches(7.5, 2)
         fig.tight_layout()
         if save:
             plt.savefig(
@@ -266,23 +274,22 @@ class MCMCSample:
     def results(
             self,
             para_names=["", "", ""],
-            col=pal[0],
             save=False,
             save_name=""):
         """
-        Generates MCMC tables in report
+        Generates MCMC tables in report.
         save_name: used to determine path for saving
         """
         
         self.plot_trace(
             para_names,
-            col=col,
+            col=pal[0],
             save=save,
             save_name="%s-trace" % save_name)
         
         self.sample_hist(
             para_names,
-            col=col,
+            col=pal[0],
             save=save,
             save_name="%s-hist" % save_name)
         
@@ -326,58 +333,70 @@ class MCMCSample:
         
 
 class GEVData:
-    def __init__(self, u, x, M, name=""):
+    def __init__(self, u, x, M=None, name=""):
         """
-        Data to be modelled by Poisson point process model
-        u: threshold
+        Data to be modelled by Poisson point process model.
+        u: threshold (float)
         x: observations
-        M: number of years of observations
+        M: number of blocks of data (float) (default is number of exceedances)
         """
         self.u = u
         self.x = np.array(x)
-        self.x_u = np.array([obs for obs in x if obs >= u])
-        self.n = len(x)
-        self.M = M
         self.name = name
         
-        # Annual maxima
-        self.ann_max = [
-            max(x[(365 * i):(365 * (i + 1) - 1)])
+        self.x_u = np.array([obs for obs in x if obs >= u])
+        self.n = len(x)
+        
+        if M is None:
+            M = len(self.x_u)
+        self.M = M
+        
+        block_size = floor(self.n / M)
+        
+        self.block_max = [
+            max(x[(block_size * i):(block_size * (i + 1) - 1)])
             for i in range(floor(M))]
         
-        Y = self.ann_max.copy()
         
-        Y.sort()
-        
-        X = 1.0 / (1.0 - (np.array(range(floor(M))) + 1.0) / (floor(M) + 1.0))
-        
-        # Empirical quantiles
-        self.emp_quant = np.array([X, Y])
-        
-        
-    def fit_GEV(self, save):
+    def fit_GEV(self, theta=None, save=False):
         """
-        Fits GEV parameters to annual maxima of data and draws Q-Q plot
+        Fits GEV parameters to annual maxima of data using maximum
+        likelihood and draws Q-Q plot.
         """
-        xi, mu, sigma = genextreme.fit(self.ann_max)
         
-        xi = -xi
+        block_max = [x for x in self.block_max if x > 0]
+        block_max.sort()
         
-        theta = [mu, sigma, xi]
+        if theta is None:
+            xi, mu, sigma = genextreme.fit(block_max)
         
-        emp_p = (np.array(range(floor(self.M))) + 1.0) / (floor(self.M) + 1.0)
+            xi = -xi
+            
+            theta = [mu, sigma, xi]
         
-        fig, ax = plt.subplots()
+        emp_p = (np.array(range(len(block_max))) + 1.0) / (len(block_max) + 1.0)
+        emp_q = quantile(theta, emp_p)
         
-        ax.scatter(quantile(theta, emp_p), self.emp_quant[1], s=10, color="k")
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        ax.scatter(emp_q, block_max, s=10, color="k")
         ax.plot([0, 1], [0, 1], transform=ax.transAxes, color="k")
         
         ax.set(
             xlabel="Theoretical quantiles",
             ylabel="Empirical quantiles")
         
-        fig.set_size_inches(6, 4)
-    
+        both = np.concatenate((emp_q, block_max))
+        
+        l = (max(both) - min(both)) / 10
+        
+        limits = [min(both) - l, max(both) + l]
+        
+        ax.grid(True)
+        
+        plt.axis("square")
+        ax.axis([*limits, *limits])
+        
         if save:
             fig.tight_layout()
             plt.savefig(
@@ -389,10 +408,13 @@ class GEVData:
         
     
     def draw(self, save=False):
+        """
+        Plots data.
+        """
         t = range(1, self.n + 1, 1)
         s = self.x
         
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(4, 3))
         
         ax.vlines(t, [0], s)
         ax.hlines(
@@ -402,7 +424,9 @@ class GEVData:
             transform=ax.get_yaxis_transform(),
             colors="r")
         
-        fig.set_size_inches(3, 2)
+        ax.set(
+            xlabel="Day",
+            ylabel="X")
     
         if save:
             fig.tight_layout()
@@ -410,11 +434,71 @@ class GEVData:
                 "%s/plots/%s-data.pdf" % (save_path, self.name),
                 bbox_inches="tight")
         plt.show()
-
+        
+        
+    def optimal_M(self, xi):
+        """
+        Choses a suitable value of M.
+        See Sharkey and J. A. Tawn 2017 eqs 12 and 13.
+        """
+        l = (xi + 1) * np.log((2 * xi + 3) / (2 * xi + 1))
+        m1 = (1 + 2 * xi + l) / (3 + 2 * xi - l)
+        m2 = (2 * xi ** 2 + 13 * xi + 8) / (2 * xi ** 2 + 9 * xi + 8)
+        
+        opt_M = round(len(self.x_u) * (m1 + m2) / 2)
+        
+        return GEVData(
+            u=self.u,
+            x=self.x,
+            M=opt_M,
+            name=self.name)
+    
+    
+    def set_obs_in_year(self, obs_in_year):
+        """
+        obs_in_year: the number of observations in a year.
+        """
+        self.obs_in_year = obs_in_year
+        
+        # Sets empirical quantiles of annual maxima
+        
+        M2 = int(floor(self.n / obs_in_year))
+        
+        Y = [
+            max(self.x[(obs_in_year * i):(obs_in_year * (i + 1) - 1)])
+            for i in range(M2)]
+        
+        Y.sort()
+        
+        X = 1.0 / (1.0 - ((np.arange(M2) + 1.0) / (M2 + 1.0)))
+        
+        self.emp_quant = np.array([X, Y])
+    
+    
+    def theta_annual(self, X):
+        """
+        Reparametrises theta by changing block size to years.
+        See Sharkey and J. A. Tawn 2017 eq. 5.
+        """
+    
+        rat = self.n / (self.obs_in_year * self.M)
+        return np.array([
+            X[0] - (X[1] / X[2]) * (1 - rat ** -X[2]),
+            X[1] * rat ** -X[2],
+            X[2]])
+    
+    def theta_annual_det(self, X):
+        """
+        Reparametrises distribution on theta by changing block size to years.
+        See Sharkey and J. A. Tawn 2017 eq. g.
+        """
+    
+        return ((self.obs_in_year * self.M) / self.n) ** -X[2]
+        
 
 def loglik(theta, data):
     """
-    Log likelihood of model
+    Log likelihood of model.
     theta: (mu, sigma, xi)
     data:  GEVdata
     """
@@ -438,7 +522,7 @@ def loglik(theta, data):
 
 def logpost(X, log_prior, data):
     """
-    Log posterior of (mu, sigma, xi), up to constant
+    Log posterior of (mu, sigma, xi), up to constant.
     X:         (mu, sigma, xi)
     log_prior: log prior of X
     data:      GEVdata
@@ -448,7 +532,7 @@ def logpost(X, log_prior, data):
 
 def quantile(X, p):
     """
-    p-quantile of GEV distribution (inverse of CDF)
+    p-quantile of GEV distribution (inverse of CDF).
     X: parameters (mu, sigma, xi)
     p: probability p
     """
@@ -465,7 +549,7 @@ def quantile(X, p):
 
 def sample_ret_level(sample, x):
     """
-    Estimates return level for sample at return period x
+    Estimates return level for sample at return period x.
     sample: numpy array
     x:      return period (years)
     returns: [
@@ -522,248 +606,256 @@ def draw_list_priors_marginals(
         support,
         save=False):
     """
-    Draws all 1 and 2-dim marginals of a list of priors
+    Draws all 1 and 2-dim marginals of a list of priors.
     list_priors: list of PriorTheta
     support: support of parameters in list_priors
     """
     
+        
+    para_names = {
+        "q": [r"$q_1$", r"$q_2$", r"$q_3$"],
+        "theta": [r"$\mu$", r"$\log\sigma$", r"$\xi$"]}
+            
+    # Determines colour of lines            
+    colr = [
+        None,
+        None,
+        {
+            "i": 2,
+            "me": 3},
+        
+        {
+            "i": 0,
+            "me": 1}]
+         
+    linestyle = {
+        "prior": "dashed",
+        "post": "solid"}
+    
     for para in ["theta", "q"]:
         for i, I in enumerate(marg_1_2):
-            disc =  [
-                [
+            if len(I) != 1:
+                continue
+            
+            # Disc is list of [X, f(X)] for each f = marginal PDF,
+            # or None if marginal PDF does not exist
+            disc = {
+                m:[
                     discretise(
                         len(I),
                         getattr(prior, m)[para]["marginal"][i],
                         [floor(1000.0 ** (1 / len(I))) for _ in I],
-                        [support[para][j] for j in I])
+                        [support[para][m][j] for j in I])
                     if getattr(prior, m)[para]["marginal"][i] is not None else None
-                    for m in ["prior", "post"]]
-                for prior in list_priors]
+                    for prior in list_priors]
+                for m in ["prior", "post"]}
             
             if len(I) == 1:
-                max_prior = max([
-                    y for prior in disc if prior[0] is not None
-                    for y in prior[0]["Y"]])
-                max_post = max([
-                    y for prior in disc if prior[1] is not None
-                    for y in prior[1]["Y"]])
+                _max = max([
+                    y for m, val in disc.items()
+                    for prior in val if prior is not None
+                    for y in prior["Y"]])
+                
+            fig, ax = plt.subplots(figsize=(9, 4.5))
             
-            fig, ax = plt.subplots(nrows=2, ncols=3)
-            for row in range(2):
-                for col in range(3):
-                    cell = ax[row, col]
-                    
-                    prior = list_priors[3 * row + col]
-                    
-                    colr = {
-                        "prior": 0,
-                        "post": 1}
-                    
-                    y_label = {
-                        "prior": "%s Prior" % prior.name,
-                        "post": "%s Posterior" % prior.name}
-                    
-                    # Priors are drawn with a different y-axis
-                    for m in ["prior", "post"]:
-                        # Draw improper distributions with dashed lines
-                        if getattr(prior, m)["proper"]:
-                            linestyle = "solid"
-                        else:
-                            linestyle = "dashed"
-                        d = disc[3 * row + col][["prior", "post"].index(m)]
-                        
-                        # If there is no MCMC or analytic marginal
-                        if d is None:
-                            continue
-                        
-                        if len(I) == 1:
-                            # Univariate
-                            if m == "prior":
-                                cell2 = cell.twinx()
-                                cell2.set(ylim=(0, max_prior * 1.05))
-                                cell2.set_ylabel(
-                                    y_label[m],
-                                    color=pal_dark[colr[m]],
-                                    rotation=270,
-                                    labelpad=15)
-                            else:
-                                cell2 = cell
-                                cell.set(
-                                    xlabel=para_names[para][I[0]],
-                                    xlim=tuple(support[para][I[0]]),
-                                    ylim=(0, max_post * 1.05))
-                                cell2.set_ylabel(
-                                    y_label[m],
-                                    color=pal_dark[colr[m]])
-                        
-                            cell2.plot(
-                                d["X"][0],
-                                d["Y"],
-                                pal[colr[m]],
-                                linestyle=linestyle,
-                                label="%s %s" % (prior.name, m))
-                            
-                            cell2.tick_params(
-                                axis="y",
-                                labelcolor=pal_dark[colr[m]])
-                            
+            l = [x for m in ["prior", "post"] for x in support[para][m][I[0]]]
+            
+            ax.set(
+                xlim=(min(l), max(l)),
+                ylim=(0, _max * 1.05))
 
-                        else:
-                            # Bivariate
-                            grid = np.meshgrid(
-                                *d["X"],
-                                indexing="ij")
-                            cell.contour(
-                                *grid,
-                                d["Y"],
-                                colors=pal[colr[m]])
+            ax.set(
+                xlabel="%s" % para_names[para][I[0]],
+                ylabel="PDF")
+            
+            ax.grid(True)
+                
+            for m in ["prior", "post"]:
+                for j, prior in enumerate(list_priors):
+                    d = disc[m][j]
+                    
+                    # If there is no MCMC or analytic marginal
+                    if d is None:
+                        continue
+                    
+                    if len(I) == 1:
+                        # Univariate
+                        
+                        h = prior.hyperpara
+                    
+                        ax.plot(
+                            d["X"][0],
+                            d["Y"],
+                            pal[colr[h[0]][h[1]]],
+                            linestyle=linestyle[m])
+                        
+                   # else:
+                        # Bivariate
+                        # grid = np.meshgrid(
+                        #     *d["X"],
+                        #     indexing="ij")
+                        # ax.contour(
+                        #     *grid,
+                        #     d["Y"],
+                        #     colors=pal[colr[m]])
+                        
+                        # # Diagonal shaded area
+                        # if para == "q":
+                        #     diag = [
+                        #         max([support["q"][j][0] for j in I]),
+                        #         min([support["q"][j][1] for j in I])]
                             
-                            # Diagonal shaded area
-                            if para == "q":
-                                diag = [
-                                    max([support["q"][j][0] for j in I]),
-                                    min([support["q"][j][1] for j in I])]
-                                
-                                cell.fill_between(
-                                    diag,
-                                    diag,
-                                    diag[0] - 10,
-                                    alpha=0.1,
-                                    color="k")
-                            
-                            # Proxy used to detect lines for legend
-                            cell.plot(
-                                support[para][I[0]][0],
-                                support[para][I[1]][0],
-                                pal[colr[m]],
-                                label="%s %s" % (prior.name, m))
-                            
-                            cell.set(
-                                xlabel=para_names[para][I[0]],
-                                ylabel=para_names[para][I[1]],
-                                xlim=tuple(support[para][I[0]]),
-                                ylim=tuple(support[para][I[1]]))
-                                
-                            cell.legend(
-                                ncol=2,
-                                bbox_to_anchor=(0.5, 1),
-                                loc="lower center",
-                                frameon=False)
-                            
-            fig.set_size_inches(8, 4.25)
-            fig.tight_layout()
+                        #     ax.fill_between(
+                        #         diag,
+                        #         diag,
+                        #         diag[0] - 10,
+                        #         alpha=0.1,
+                        #         color="k")
+                        
+                        # # Proxy used to detect lines for legend
+                        # ax.plot(
+                        #     support[para][I[0]][0],
+                        #     support[para][I[1]][0],
+                        #     pal[colr[m]])
+                        
+                        # ax.set(
+                        #     xlim=tuple(support[para][I[0]]),
+                        #     ylim=tuple(support[para][I[1]]))
+            
+            # Joining plots together
+            fig.subplots_adjust(hspace=0)
+            plt.setp(
+                [a.get_xticklabels() for a in fig.axes[:-1]],
+                visible=False)
+            
             if save:
                 plt.savefig(
                     "%s/plots/%s-%s-%s-%s-marg.pdf" % (
                         save_path,
                         list_priors[0].inst_name,
                         para,
-                        floor(i / 3),
+                        ["uni", "bi"][floor(i / 3)],
                         i - floor(i / 3) * 3),
                     bbox_inches="tight")
             plt.show()
-    
+            
 
 def plot_return_level(
-        prior,
-        true_rl=None,
-        emp_rl=None,
-        ylim=None,
+        list_priors,
+        analytic_rl=None,
+        simul_rl=None,
         save=False):
     """
-    Plots estimated return level
-    prior:         prior (PriorTheta)
-    true_rl:       draws analytic return level
-    emp_rl:        draws return level simulated from large sample
-    ylim:          sets the upper y-axis limit
+    Plots estimated return level.
+    prior:       prior (PriorTheta)
+    analytic_rl: draws analytic return level
+    simul_rl:    draws empirical return level
+    ylim:        sets the upper y-axis limit
     """
-    N = 20
-    X = np.logspace(0.0001, 3.0, num=N)
+    N = 100
+    X = np.logspace(0.0001, 4.0, num=N)
     
-    fig, ax = plt.subplots()
+    colr = [0, 2, 1, 3]
     
-    ax.scatter(*prior.post["data"].emp_quant, s=10, color="k")
-    
-    if true_rl is not None:
-        ax.plot(*true_rl, "k")
+    # Finds maximum y axis value
+    _max = 0
+    for prior in list_priors:
+        x = np.array([
+            sample_ret_level(prior.post["theta"]["sample"], x)
+            for x in X])[:, 2][-1]
+        if x > _max:
+            _max = x
         
-    if emp_rl is not None:
-        n = int(np.shape(emp_rl)[1] / 1000)
+    
+    fig, ax = plt.subplots(figsize=(14, 9))
+
+    if analytic_rl is not None:
+        ax.plot(*analytic_rl, "k")
+        
+    if simul_rl is not None:
+        n = int(np.shape(simul_rl)[1] / 1000)
         ax.plot(
-            *emp_rl[:, n * (1000 - 600):n * (1000 - 1)],
+            *simul_rl[:, n * (1000 - 600):n * (1000 - 1)],
             color="k",
             linestyle="dashed")
         
-    Y = np.array([
-        sample_ret_level(prior.post["theta"]["sample"], x)
-        for x in X])
-    
-    ax.plot(
-        X,
-        Y[:, 0],
-        color=pal[0],
-        label="%s posterior" % prior.name)
-    
-    plt.fill_between(
-        X,
-        Y[:, 1],
-        Y[:, 2],
-        alpha=0.3,
-        facecolor=pal[0])
+    for i, prior in enumerate(list_priors):		
+        Y = np.array([
+            sample_ret_level(prior.post["theta"]["sample"], x)
+            for x in X])
         
-    ax.set_ylim([None, ylim])   
-    ax.set(xlabel="Return period (years)", ylabel="Quantile")
-                        
-    ax.legend(
-        ncol=2,
-        bbox_to_anchor=(0.5, 1),
-        loc="lower center",
-        frameon=False)
+        ax.plot(
+            X,
+            Y[:, 0],
+            color=pal[colr[i]])
         
+        ax.plot(
+            X,
+            Y[:, 1],
+            color=pal[colr[i]],
+            linestyle="dashed")
+                
+        ax.plot(
+            X,
+            Y[:, 2],
+            color=pal[colr[i]],
+            linestyle="dashed")
+        
+        # plt.fill_between(
+        #     X,
+        #     Y[:, 1],
+        #     Y[:, 2],
+        #     alpha=0.2,
+        #     facecolor=pal[colr[i]])
+        
+    ax.scatter(*list_priors[0].post["data"].emp_quant, s=10, color="k")
+        
+    ax.set_ylim([0.0, _max * 1.1])   
+    ax.set(xlabel="Return period (years)", ylabel="Return level")
+    
     ax.grid()
     ax.set_xscale("log")
-    
-    fig.set_size_inches(4, 4)
 
     fig.tight_layout()
     if save:
         plt.savefig(
-            "%s/plots/%s-%s-post-return-level.pdf" % (
+            "%s/plots/%s-post-return-level.pdf" % (
                 save_path,
-                prior.inst_name,
-                prior.name),
+                prior.inst_name),
             bbox_inches="tight")
     plt.show()
 
 
-para_names = {
-    "q": [r"$q_1$", r"$q_2$", r"$q_3$"],
-    "theta": [r"$\mu$", r"$\log\sigma$", r"$\xi$"]}
-
-
 def vary_threshold(
-        no_exceeds,
+        u_list,
         priors,
         inits,
         prop_sds,
         data,
-        emp_rl,
-        save=False):
+        save=False,
+        save_name=""):
     """
-    Varies the number of exceedances and produces plot of return level
-    estimates for three years
+    Varies the threshold and produces plot of return level
+    estimates for three years.
     no_exceeds: list of no of exceedances
-    priors:     list of priors made with each no of exceedance
+    priors:     list of identical priors
     data:       GEVdata
     emp_rl:     empirical quantiles from large sample
     """
-    for i in range(len(no_exceeds)):
-        priors[i].mcmc(
+    for i in range(len(u_list)):
+        data2 = GEVData(u_list[i], data.x)
+        data2.set_obs_in_year(data.obs_in_year)
+        
+        print(data2.u, len(data2.x_u))
+        
+        priors[i].get_samples(
             "post",
             inits[i],
             prop_sds[i],
-            data=data[i],
+            p=np.array([0.1, 0.01, 0.001]),
+            data=data2,
             save=False)
+        
     
     selected_years = [10.0, 100.0, 1000.0]
     selected_years_labels = ["$r = 10$", "$r = 10^2$", "$r = 10^3$"]
@@ -774,114 +866,77 @@ def vary_threshold(
             for prior in priors]
         for y in selected_years])
     
-    n = int(np.shape(emp_rl)[1] / 1000)
-    
-    fig, ax = plt.subplots(nrows=1, ncols=3)
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(9, 3))
     for i in range(3):
         cell = ax[i]
-        cell.plot(no_exceeds, sy_ret_level[i, :, 0])
+        cell.plot(u_list, sy_ret_level[i, :, 0])
         cell.fill_between(
-            no_exceeds,
+            u_list,
             sy_ret_level[i, :, 1],
             sy_ret_level[i, :, 2],
             alpha=0.3,
             facecolor=pal[0])
-        cell.axhline(
-            y=emp_rl[1, n * (1000 - 10 ** (2 - i))],
-            color="k",
-            linestyle="dashed")
     
         cell.set(
-            xlabel="Number of exceedances",
+            xlabel="Threshold",
             ylabel="Return level for %s" % selected_years_labels[i])
         cell.grid()
-        
-    fig.set_size_inches(9, 3)
     
     fig.tight_layout()
     if save:
         plt.savefig(
-            "%s/plots/%s-vt.pdf" % (save_path, priors[0].inst_name),
+            "%s/plots/%s-vt.pdf" % (save_path, save_name),
             bbox_inches="tight")
     plt.show()
-    
-
-def sim_gev(
-        para,
-        M,
-        no_exceed,
-        load=False,
-        save=False,
-        name=""):
-    """
-    Simulates GEV distribution and returns GEVData
-    para:      parameters (mu, sigma, xi)
-    M:         number of years of data
-    no_exceed: number of exceedances
-    load:      loads data
-    save:      saves data
-    name:      name of the data
-    """
-    if load:
-        data = load_data(name)
-    else:
-        data = genextreme.rvs(
-            -para[2],
-            loc=para[0],
-            scale=para[1], 
-            size=M * 365)
-        if save:
-            np.savetxt("data/%s.csv" % name, data, delimiter=",")
-    
-    return GEVData(np.sort(data)[::-1][no_exceed], data, M, name)
     
     
 def poisson_point_process(
         para,
-        M,
+        n,
         no_exceed,
         load=False,
         save=False,
         filename="",
         name=None):
     """
-    Simulates Poisson point process and returns GEVData
-    para:      parameters (mu, sigma, xi)
-    M:         number of years of data
-    no_exceed: number of exceedances
-    load:      loads data
-    save:      saves data
-    name:      name of the data
+    Simulates Poisson point process with 1 expected exceedance per block
+    and number of blocks equal to number of exceedances.
+    Returns GEVData.
+    para:              parameters (mu, sigma, xi)
+    n:                 number of observations (int)
+    no_exceed:         number of exceedances (int)
+    load:              loads data
+    save:              saves data
+    name:              name of the data
     """
     mu, sigma, xi = para
     
-    u = mu + sigma * ((no_exceed / M) ** (-xi) - 1) / xi
-    
     if load:
-        data = load_data(name)
+        trunc_data = load_data(name)
     else:
         data = genpareto.rvs(
             xi,
-            loc=u,
+            loc=mu,
             scale=sigma, 
-            size=M * 365)
-        if save:
-            np.savetxt("data/%s.csv" % name, data, delimiter=",")
+            size=no_exceed)
     
-    # Determines the indices of the exceedances
-    shuffled_idx = [x for x in range(M * 365)]
-    shuffle(shuffled_idx)
-    
-    trunc_data = [0 for _ in range(M * 365)]
-    for i in range(no_exceed):
-        trunc_data[shuffled_idx[i]] = data[i]
+        # Determines the indices of the exceedances
+        shuffled_idx = [x for x in range(n)]
+        shuffle(shuffled_idx)
         
-    return GEVData(u, trunc_data, M, name)
+        trunc_data = [0 for _ in range(n)]
+        for i in range(no_exceed):
+            trunc_data[shuffled_idx[i]] = data[i]
+            
+        if save:
+            np.savetxt("data/%s.csv" % name, trunc_data, delimiter=",")
+        
+    return GEVData(mu, trunc_data, name=name)
 
 
 def load_data(filename):
     """
-    Loads data in csv format, with one column and no header row
+    Loads data in csv format, with one column and no header row.
     Returns: List
     """
     
@@ -892,3 +947,96 @@ def load_data(filename):
     return data
     
 
+def tn_para(m, V):
+    """
+    Converts mean and variance to truncated normal parameters.
+    m: mean
+    V: variance
+    Outputs: (parent mean, parent standard deviation)
+    """
+    def hazard(x):
+        return norm.pdf(x) / norm.sf(x)
+        
+    def f(x):
+        h = hazard(x)
+        return (1 + x * h - h ** 2) / (h - x) ** 2
+
+    def g(x):
+        return f(x) - (V / m ** 2)
+    
+    def g_prime(x):
+        h = hazard(x)
+        d = h - x
+        return (2 + h * d * (-3 + d * x)) / d ** 3
+    
+    sol = root_scalar(g, x0=0, bracket=(-50, 20))
+    
+    alpha = sol.root
+
+    sigma = m / (hazard(alpha) - alpha)
+    mu = -alpha * sigma
+    
+    return (mu, sigma)
+
+def para_for_quantiles(para_tn):
+    """
+    para_tn: [parent mean, parent standard deviation]
+    """
+    # TN
+    
+    mu_tn = para_tn[:, 0]
+    sigma_tn = para_tn[:, 1]
+    
+    # Marginals of q_tilde
+    q_tilde_marg_tn = [
+        TruncatedDistribution(
+            Normal(mu_tn[i], sigma_tn[i]),
+            0.0,
+            TruncatedDistribution.LOWER)
+        for i in range(3)]
+    
+    # Marginals of q
+    target_tn = [
+        q_tilde_marg_tn[0],
+        q_tilde_marg_tn[0] + q_tilde_marg_tn[1],
+        q_tilde_marg_tn[0] + q_tilde_marg_tn[1] + q_tilde_marg_tn[2]]
+    
+    par_tn = [None for _ in range(3)]
+    
+    for i in range(3):
+        # Truncated normal
+        def KL_tn(par):
+            mu, logsigma = par
+            
+            mu = float(mu)
+            logsigma = float(logsigma)
+            
+            dist = TruncatedDistribution(
+                Normal(mu, np.exp(logsigma)),
+                0.0,
+                TruncatedDistribution.LOWER)
+        
+            upper_bound = max(
+                target_tn[i].getRange().getUpperBound()[0],
+                dist.getRange().getUpperBound()[0])
+            
+            def integrand(x):
+                pdf1 = dist.computePDF(x)
+                pdf2 = target_tn[i].computePDF(x)
+                pdf1 = max(pdf1, 1e-140)
+                pdf2 = max(pdf2, 1e-140)
+                return pdf1 * np.log(pdf1 / pdf2)
+            
+            X = np.linspace(0.0, upper_bound, 100)
+            return upper_bound * np.mean([integrand(x) for x in X])
+        
+        res = minimize(KL_tn, (35.0, 1.0))
+        
+        mu, logsigma = res.x
+            
+        mu = float(mu)
+        logsigma = float(logsigma)
+        
+        par_tn[i] = [mu, np.exp(logsigma)]
+    
+    return np.array(par_tn)
