@@ -21,7 +21,9 @@ study_name = "ws"
 # Obtaining data #------------------------------------------------------------#
 #=============================================================================#
 
-data_raw = util.load_data(study_name)
+# "ws-mangled" is "ws" which has been altered for privacy concerns.
+data_raw = util.load_data("ws")
+# data_raw = util.load_data("ws-mangled")
 
 u = 21.0
 
@@ -30,7 +32,7 @@ data = util.GEVData(u, data_raw, name=study_name)
 data.draw(save=save_all)
 
 # Fits GEV model
-theta = data.fit_GEV(save=True)
+theta = data.fit_GEV(save=save_all)
 
 # Chooses optimal value of M
 data = data.optimal_M(theta[2])

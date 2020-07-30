@@ -78,11 +78,11 @@ def pi(xi):
         c(xi) * (b(xi) * e(xi) - d(xi) * c(xi))]
     if sum(arr) <= 0:
         return 0
-    return (sigma ** 2 / w1(xi) ** 2) * sum(arr) ** 0.5
+    return (1 / sigma ** 2 * w1(xi) ** 2) * sum(arr) ** 0.5
 
 fig, ax = plt.subplots(figsize=(6, 4))
 
-X = np.arange(0, 3, 0.001)
+X = np.arange(-2, 2, 0.001)
 Y = [pi(xi) for xi in X]
 ax.plot(X, Y)
 ax.axvline(0, linestyle="dashed", color="k")
@@ -94,7 +94,7 @@ ax.set(
 
 ax.grid(True)
 
-if True:
+if False:
     fig.tight_layout()
     plt.savefig(
         "%s/plots/jeffreys.pdf" % util.save_path,

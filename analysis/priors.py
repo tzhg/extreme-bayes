@@ -101,7 +101,9 @@ class PriorTheta:
         
         if typ == "post":
             # Transformation M* -> M
-            sample_theta = np.array([data.theta_annual(X) for X in mcmc_obj.sample])
+            sample_theta = np.array([
+                data.theta_annual(X)
+                for X in mcmc_obj.sample])
         else:
             sample_theta = mcmc_obj.sample
             
@@ -331,8 +333,10 @@ class PriorQ(PriorTheta):
                     return np.log(sigma)
                     
                 e = (s * xi - 1.0) * np.exp(s * xi)
+                
+                f = np.log(abs(e[0] - e[1]))
             
-                return np.log(sigma) + np.log(abs(e[0] - e[1])) - np.log(xi ** 2.0)
+                return np.log(sigma) + f - np.log(xi ** 2.0)
         
         super().__init__(
             util.log_transform(f, g, g_det),

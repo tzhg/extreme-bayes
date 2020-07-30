@@ -1,6 +1,6 @@
 % !TeX spellcheck = en_GB
 
-% v13.1
+% v14
 
 \documentclass{article}
 
@@ -163,12 +163,12 @@
 	\marginals{#1}{#2}{q}{q_2}{q_2}{q_3}
 }
 
-\newcommand{\allreturnlevels}[2]{
+\newcommand{\allreturnlevels}[3]{
 	\begin{sidewaysfigure}
 		\centering
 		\includegraphics[%
-						width=\linewidth]{%
-						plots/#1-post-return-level}
+			width=\linewidth]{%
+			plots/#1-post-return-level}
 		\caption{Mean return level with 95\% credible intervals
 			estimated using posterior distributions of priors with
 			$k = 3$ and independent copula \textbf{\color{blue}{(blue)}},
@@ -176,9 +176,8 @@
 			$k = 3$ and maximum entropy copula
 			\textbf{\color{orange}{(orange)}}, and
 			$k = 2$ and maximum entropy copula \textbf{\color{red}{(red)}},
-			with asymptotic return level {\color{black} \textbf{(black solid)}}
-			and empirical quantiles {\color{black} \textbf{(black dots)}}
-			for #2.}
+			with empirical quantiles {\color{black} \textbf{(black dots)}},
+			#3for #2.}
 		\label{table:#1-post-return-level}
 	\end{sidewaysfigure}
 }
@@ -186,7 +185,7 @@
 %%% Style
 
 \newcommand{\hwtitle}{MSIAM M2 Thesis: Extreme quantile Bayesian inference}
-\newcommand{\hwdate}{27\th July 2020}
+\newcommand{\hwdate}{30\th July 2020}
 \newcommand{\hwname}{Tony Zheng}
 
 \title{%
@@ -219,6 +218,27 @@
 \begin{document}
 %	
 \maketitle
+%
+\subsection*{Context}
+%
+
+%
+This work is carried out at Inria Grenoble Rhône-Alpes,
+a national research institution specialised in mathematics and
+computer science,
+and is sponsored by Électricité de France R\&D,
+who are investigating extreme value analysis
+in the context of the modelling
+of extreme environmental data
+for the construction of structures
+such as nuclear power plants and hydraulic dams.
+Supervised by:
+%
+\begin{itemize}
+	\item Anne Dutfoy (\href{mailto:anne.dutfoy@edf.fr}{anne.dutfoy@edf.fr}),
+	\item Stéphane Girard (\href{mailto:stephane.girard@inria.fr}{stephane.girard@inria.fr}),
+	\item Julyan Arbel (\href{mailto:julyan.arbel@inria.fr}{julyan.arbel@inria.fr}).
+\end{itemize}
 %
 \section{Introduction}
 %
@@ -401,10 +421,10 @@ the principle of maximum entropy,
 which was introduced by \cite{jaynes1957}.
 Entropy is a measure of how much information we have about a distribution.
 It is defined by \cite{shannon1948},
-for a continuous probability density $p$, as
+for a continuous PDF $f$, as
 %
 \begin{align*}
-	{\cal E}(p) \coloneqq -\int_{x \colon p(x) > 0} \log(p(x)) \, \dd x \,.
+	{\cal E}(f) \coloneqq -\int_{x \colon f(x) > 0} \log(f(x)) \, \dd x \,.
 \end{align*}
 %
 According to the principle of maximum entropy,
@@ -456,7 +476,7 @@ and use the invertible transformation
 	\theta &\mapsto (\sigma, q_{1}, q_{2}) \,.
 \end{align*}
 %
-The determinants of $g_3$ and $g_2$ are derived in
+The determinants of the Jacobians of $g_3$ and $g_2$ are derived in
 Appendix~\ref{appendix:reparametrisation}.
 %
 
@@ -503,8 +523,8 @@ Furthermore, we could choose a copula
 which results in a joint distribution
 of maximum entropy given these constraints.
 In \cite{butucea2018}, it is shown that
-if a sequence of marginals with PDFs $(f_i)_{1 \geq i \geq d}$
-and CDFs $(F_i)_{1 \geq i \geq d}$
+if a sequence of marginals with PDFs $(f_i)_{1 \leq i \leq d}$
+and CDFs $(F_i)_{1 \leq i \leq d}$
 satisfy the condition
 %
 \begin{align}
@@ -547,7 +567,7 @@ After a change of variables
 	\implies \dd y &= f_i(x) \, \dd x \,,
 \end{align*}
 %
-the integral in \ref{eq:max-ent-pdf} can be simplified to
+the integral in \eqref{eq:max-ent-pdf} can be simplified to
 %
 \begin{align*}
 	\int_{1 - p_i}^{1 - p_i} \frac{1}{F_{i - 1}(F^{-1}_i(y)) - y}
@@ -565,41 +585,42 @@ or equivalently the first two moments, are fixed by an expert.
 %
 
 %
-Let $p$ be a probability density with support $[0, +\infty)$.
-We define $n + 1$ constraints on $p$ in the form
+Let $f$ be a PDF with support $[0, +\infty)$.
+We define $n + 1$ constraints on $f$ in the form
 %
 \begin{align*}
-	\int_0^{+\infty} p(x) f_i(x) \, \dd x - c_i \,, \quad i = 0, \dots, n \,,
+	\int_0^{+\infty} f(x) g_i(x) \, \dd x - c_i \,, \quad i = 0, \dots, n \,,
 \end{align*}
 %
-for measurable functions $f_i$ and constants $c_i \in \R$,
-including the constraint $f_0 \equiv 1, c_i = 1$
+for measurable functions $g_i$ and constants $c_i \in \R$,
+including the constraint $g_0 \equiv 1, c_i = 1$
 to ensure that the distribution is well defined.
-Using Lagrange multipliers and calculus of variations,
+Using Lagrange multipliers and
+calculus of variations~(\cite{weinstock1974calculus}),
 we obtain the objective function
 %
 \begin{align*}
-	L(p, \lambda) &= -\int_0^{+\infty} p(x) \log(p(x)) \, \dd x
+	L(f, \lambda) &= -\int_0^{+\infty} f(x) \log(f(x)) \, \dd x
 		+ \sum_{i=0}^n \lambda_i
-		\left(\int_0^{+\infty} p(x) f_i(x) \, \dd x - c_i\right) \,,
+		\left(\int_0^{+\infty} f(x) g_i(x) \, \dd x - c_i\right) \,,
 \end{align*}
 %
 which has partial derivatives
 %
 \begin{align*}
-	\frac{\partial L}{\partial p}(p)
-		&= -\log (p(x)) - 1 + \sum_{i = 0}^n \lambda_i f_i(x) \,, \\
-	\frac{\partial ^ 2 L}{\partial p ^ 2}(p)
-		&= -\frac{1}{p(x)} < 0 \,,
+	\frac{\partial L}{\partial f}(f)
+		&= -\log (f(x)) - 1 + \sum_{i = 0}^n \lambda_i g_i(x) \,, \\
+	\frac{\partial ^ 2 L}{\partial f ^ 2}(f)
+		&= -\frac{1}{f(x)} < 0 \,,
 \end{align*}
 %
 and therefore
 %
 \begin{align}
-	\frac{\partial L}{\partial p} = 0 &\iff p(x)
-		= \exp\left(-1 + \sum_{i = 0}^n \lambda_i f_i(x)\right)
+	\frac{\partial L}{\partial f} = 0 &\iff f(x)
+		= \exp\left(-1 + \sum_{i = 0}^n \lambda_i g_i(x)\right)
 		\,, \nonumber\\
-	&\implies p(x) \propto \exp\left(\sum_{i = 1}^n \lambda_i f_i(x)\right) \,.
+	&\implies f(x) \propto \exp\left(\sum_{i = 1}^n \lambda_i g_i(x)\right) \,.
 	\label{eq:p-prop}
 \end{align}
 %
@@ -640,25 +661,25 @@ and therefore
 If we fix the first two moments,
 %
 \begin{align*}
-	\int_{0}^{+\infty} p(x) x \, \dd x \quad \text{and} \quad
-		\int_{0}^{+\infty} p(x) x ^ 2 \, \dd x \,,
+	\int_{0}^{+\infty} f(x) x \, \dd x \quad \text{and} \quad
+		\int_{0}^{+\infty} f(x) x ^ 2 \, \dd x \,,
 \end{align*}
 %
 this implies that
 %
 \begin{align*}
-	f_1(x) = x \quad \text{and} \quad
-		f_2(x) = x ^ 2 \,,
+	g_1(x) = x \quad \text{and} \quad
+		g_2(x) = x ^ 2 \,,
 \end{align*}
 %
 and therefore from \eqref{eq:p-prop},
 %
 \begin{align*}
-	p(x) \propto \exp\left(\lambda_1 x + \lambda_2 x ^ 2\right) \,.
+	f(x) \propto \exp\left(\lambda_1 x + \lambda_2 x ^ 2\right) \,.
 \end{align*}
 %
 Therefore the maximum entropy distribution is a truncated normal distribution
-with support $[0, +\infty)$. It has PDF
+with support $[0, +\infty)$. It has PDF~(\cite{johnson})
 %
 \begin{align*}
 	f(x) &= \frac{1}{\sigma'} \frac{\phi(\frac{x - \mu'}{\sigma})}
@@ -797,7 +818,7 @@ we can choose a value $\tilde{M}$ which
 leads to better MCMC convergence,
 reparametrise the prior from 
 $\theta$ to $\tilde{\theta}$
-using the determinant of the inverse of
+using the inverse of
 $T_{\tilde{M}, M}$,
 obtain a sample of $\tilde{\theta}$ using MCMC,
 and finally transform the sample using $T_{\tilde{M}, M}$
@@ -805,10 +826,15 @@ to obtain a sample of $\theta$.
 
 %
 Once we have samples of $\theta$,
-we can obtain samples of the three quantiles \\
-$(q_1, q_2, q_3)$. We can then use kernel density estimation
+we can obtain samples of the three quantiles
+%
+\begin{align*}
+	(q_1, q_2, q_3) \,.
+\end{align*}
+%
+We can then use kernel density estimation
 with Gaussian kernels to visualise the marginals of
-$\theta$ and $(q_1, q_2, q_3)$
+both joint distributions
 using line and contour plots.
 We can use the samples of the posterior of $\theta$
 to plot the mean return level against the return period,
@@ -824,7 +850,7 @@ datasets.
 The first was created by simulating the exceedances of a certain threshold
 from a Poisson point process.
 The second is real data consisting of observed daily average wind speed at
-Tours, France from 1931 to 2011 during the months November to May.
+Tours, France from 1931 to 2011.
 These datasets are illustrated in Fig.~\ref{fig:data}.
 We fixed $p = (0.1, 0.01, 0.001)$ for both studies.
 %
@@ -842,8 +868,18 @@ We fixed $p = (0.1, 0.01, 0.001)$ for both studies.
 The analyses are coded in Python, using the libraries and packages
 NumPy~(\cite{numpy}), Matplotlib~(\cite{matplotlib}),
 SciPy~(\cite{scipy}), and OpenTURNS~(\cite{OpenTURNS}).
-The code is available on GitHub.
-\footnote{\url{https://github.com/tzhg/extreme-bayes}}
+The code is available on GitHub
+\footnote{\url{https://github.com/tzhg/extreme-bayes}},
+and consists of the files
+%
+\begin{enumerate}
+	\item \codeword{util.py}: useful classes and functions,
+	\item \codeword{priors.py}: defines the priors,
+	\item \codeword{analysis-ppp.py}: analysis on simulation study,
+	\item \codeword{analysis-ws.py}: analysis on real data,
+	\item \codeword{jeffreys.py}: Jeffreys prior.
+\end{enumerate}
+%
 Details of the Metropolis algorithm implementations
 are tabulated in Appendix~\ref{appendix:mcmc-tables}.
 %
@@ -907,7 +943,7 @@ and we chose the expert specification
 %
 The marginals of
 $\theta$ and $(q_1, q_2, q_3)$ for the different priors are illustrated
-in Tables~\ref{table:ppp-theta-uni-marg} and
+in Figs~\ref{table:ppp-theta-uni-marg} and
 \ref{table:ppp-q-uni-marg}.
 The posteriors of $\mu$ and $\log\sigma$ are very similar,
 and very concentrated compared to the priors, whereas the
@@ -919,8 +955,10 @@ than $k = 3$ and independent priors.
 %
 
 %
-We plotted the mean return level compared to the asymptotic return level
-in Fig.~\ref{table:ppp-post-return-level}.
+We plotted the mean return level in Fig.~\ref{table:ppp-post-return-level}
+along with 95\% credible intervals.
+The black line is the asymptotic return level based on the
+chosen value of $\theta$, as the block size goes to infinity.
 The return levels of the $k = 2$ posteriors are almost identical,
 with the maximum entropy copula posteriors
 having a slightly wider credible interval.
@@ -928,7 +966,8 @@ The $k = 3$ posteriors are higher and more variable,
 with the maximum entropy copula posterior
 in particular having a very large credible interval.
 %
-\allreturnlevels{ppp}{simulation study}
+\allreturnlevels{ppp}{simulation study}{%
+asymptotic return level {\color{black} \textbf{(black solid)}}, }
 %
 \FloatBarrier
 \subsection{Wind speed data}
@@ -974,23 +1013,28 @@ using \eqref{eq:quantile} as
 \begin{align*}
 	\hat{q}_1 = 26.927 \,,
 	\quad \hat{q}_2 = 33.636 \,,
-	\quad \hat{q}_3 = 39.004 \,
+	\quad \hat{q}_3 = 39.004 \,.
 \end{align*}
 %
-and we chose the expert specification
+However, with an expert specification of
+%
+\begin{align*}
+	\left(\hat{q}_1, \hat{q}_2, \hat{q}_3, 27 \right) \,,
+\end{align*}
+%
+the condition \eqref{eq:C2} was not satisfied as the distributions
+of the quantiles
+were too close together. Therefore we chose a specification of
 %
 \begin{align*}
 	\left(26.45, 33.636, 48, 27 \right) \,.
 \end{align*}
 %
-In order to satisfy the condition \eqref{eq:C2},
-we did not choose the exact fitted quantiles
-as means for the distributions on the quantile differences.
 
 %
 The univariate and bivariate marginals of
 $\theta$ and $(q_1, q_2, q_3)$ for the different priors are illustrated
-in Tables~\ref{table:ws-theta-uni-marg} and \ref{table:ws-q-uni-marg}.
+in Figs~\ref{table:ws-theta-uni-marg} and \ref{table:ws-q-uni-marg}.
 Compared to the simulation study, the posterior distribution of the
 parameters $\mu$ and $\log\sigma$ are more variable,
 and the
@@ -1008,7 +1052,7 @@ $k = 3$ maximum entropy copula posterior
 is significantly higher and more variable compared
 to the $k = 3$ independent copula posterior.
 %
-\allreturnlevels{ws}{wind speed data}
+\allreturnlevels{ws}{wind speed data}{}
 %
 \FloatBarrier
 %
@@ -1025,11 +1069,11 @@ Based on the results,
 the choice of $k = 2$ or
 $k = 3$ distributions specified is very significant
 in estimating the return level.
-Using $k = 3$ priors will considerably reduce the credibility intervals,
+Using $k = 3$ priors will considerably reduce the credible intervals,
 at the expense of an extra distribution to specify.
 Also, the use of $k = 2$ priors is unjustified as we have not yet
 shown that the resulting posteriors are proper.
-\cite{northrop2016} show that for least 4 observations,
+\cite{northrop2016} show that for least four observations,
 for a uniform prior on $(\mu, \log \sigma, \xi)$,
 i.e. $k = 0$, the resulting posterior is proper.
 %
@@ -1227,11 +1271,11 @@ Using the Fisher information matrix derived in \cite{sharkey2017}, if we let
 \begin{align*}
 	a &\coloneqq \frac{(\xi + 1)^2}{2\xi + 1} \,, \\
 	b &\coloneqq -w_1(\xi)2 v + (\xi + 1) v^2 - 1
-		  + 2(\xi + 1) w_1(\xi) w_2(\xi) - \xi w_4(\xi) \,, \\
+  + 2(\xi + 1) w_1(\xi) w_2(\xi) - \xi w_4(\xi) \,, \\
 	c &\coloneqq \left\{\frac{v^2}{\xi w_1(\xi)^2}
 		- \frac{2\log w_1(\xi)}{\xi ^ 3}
-		 + \frac{2v}{\xi ^ 2 w_1(\xi)}
-		 + \frac{1}{\xi ^ 2}\left(\frac{\log w_1(\xi)}{\xi} - \frac{1}{w_1(\xi)}
+	 + \frac{2v}{\xi ^ 2 w_1(\xi)}
+	 + \frac{1}{\xi ^ 2}\left(\frac{\log w_1(\xi)}{\xi} - \frac{1}{w_1(\xi)}
 		\right)^2 \right\}_+ \\
 	&\ \phantom{=} + \frac{2\{\xi + \log w_1(\xi)\}_+}{M\xi ^ 3}
 		- \frac{2w_2(\xi)}{\xi ^ 2w_1(\xi)}
@@ -1252,16 +1296,16 @@ where
 	w_1(\xi) &\coloneqq \{1 + \xi v\}_+ \,, \\
 	w_2(\xi) &\coloneqq \frac{\{1 + (\xi + 1) v\}_+}{\xi + 1} \,, \\
 	w_3(\xi) &\coloneqq \frac{\{1 + (2\xi + 1) v\}_+}{2\xi + 1} \,, \\
-	w_4(\xi) &\coloneqq \frac{\{(2 \xi^2 + 3\xi + 1) v^2 
-		+ (4\xi + 2) v + 2\}_+}{2\xi + 1} \,,
+	w_4(\xi) &\coloneqq \frac{\{(2\xi + 1)(\xi + 1) v^2 
+		+ 2(2\xi + 1) v + 2\}_+}{2\xi + 1} \,,
 \end{align*}
 %
 then Jeffreys prior is proportional to
 %
 \begin{align*}
 	\pi(\theta) \propto
-		 \frac{\sigma^2}
-		{w_1(\xi)^2}\sqrt{a(df-e^2) + b(ce-bf) + c(be-dc)} \,.
+	 \frac{\sqrt{a(df-e^2) + b(ce-bf) + c(be-dc)}}
+		{\sigma^2 w_1(\xi)^2} \,.
 \end{align*}
 %
 Fig.~\ref{fig:jeffreys} shows the Jeffreys prior as a function of $\xi$,
@@ -1600,7 +1644,8 @@ with support parameters $a = 0$ and $b = +\infty$,
 and we would like to determine the remaining parameters $\mu$ and $\sigma$.
 
 %
-This means that we need to invert the equations
+This means that we need to invert the equations for the mean and variance,
+given by~(\cite{johnson})
 %
 \begin{align*}
 	\E(X) &= \mu + \frac{\phi(\alpha)}{1 - \Phi(\alpha)} \sigma \\
@@ -1644,14 +1689,14 @@ Therefore,
 		{\left(H(\alpha) - \alpha\right) ^ 2} \eqqcolon f(\alpha) \,, \\
 \end{align*}
 %
-and once we have $\alpha$, from \refeq{tn-mean} we have
+and once we have $\alpha$, from \eqref{tn-mean} we have
 %
 \begin{align*}
 	\frac{\mu^*}{\sigma} = H(\alpha) - \alpha
 		\implies \sigma = \frac{\mu^*}{H(\alpha) - \alpha}
 \end{align*}
 %
-and from \refeq{tn-alpha},
+and from \eqref{tn-alpha},
 %
 \begin{align*}
 	\alpha = -\frac{\mu}{\sigma} \implies \sigma =  -\alpha \mu \,.

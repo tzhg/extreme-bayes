@@ -382,8 +382,11 @@ class GEVData:
             xi = -xi
             
             theta = [mu, sigma, xi]
+            
+        a = np.array(range(len(block_max))) + 1.0
+        b = len(block_max) + 1.0
         
-        emp_p = (np.array(range(len(block_max))) + 1.0) / (len(block_max) + 1.0)
+        emp_p = a / b
         emp_q = quantile(theta, emp_p)
         
         fig, ax = plt.subplots(figsize=(6, 4))
@@ -645,17 +648,18 @@ def draw_list_priors_marginals(
         support,
         save=False):
     """
-    Draws all 1-dim marginals of a list of priors.
+    Draws all 1- and 2-dim marginals of a list of priors.
+    Does not save 2-dim marginals.
     ---------------------------------------------------------------------------
     list_priors: List of PriorTheta.
     support:     Support of parameters in list_priors:
-                 {
-                     theta: {
-                         prior: [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]],
-                         post:  [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]]},
-                     q: {
-                         prior: [[q11, q12], [q21, q22], [q31, q32]],
-                         post:  [[q11, q12], [q21, q22], [q31, q32]]}}
+            {
+                theta: {
+                    prior: [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]],
+                    post:  [[mu1, mu2], [logsigma1, logsigma2], [xi1, xi2]]},
+                q: {
+                    prior: [[q11, q12], [q21, q22], [q31, q32]],
+                    post:  [[q11, q12], [q21, q22], [q31, q32]]}}
     """
         
     para_names = {
@@ -668,9 +672,6 @@ def draw_list_priors_marginals(
     
     for para in ["theta", "q"]:
         for i, I in enumerate(marg_1_2):
-            if len(I) != 1:
-                continue
-            
             # Disc is list of [X, f(X)] for each f = marginal PDF,
             # or None if marginal PDF does not exist
             disc = {
@@ -685,58 +686,92 @@ def draw_list_priors_marginals(
                 for m in ["prior", "post"]}
             
             if len(I) == 1:
-                _max = max([
-                    y for m, val in disc.items()
-                    for prior in val if prior is not None
-                    for y in prior["Y"]])
+                # Univariate
+                fig, ax = plt.subplots(figsize=(9, 4.5))
                 
-            fig, ax = plt.subplots(figsize=(9, 4.5))
-            
-            l = [x for m in ["prior", "post"] for x in support[para][m][I[0]]]
-            
-            ax.set(
-                xlim=(min(l), max(l)),
-                ylim=(0, _max * 1.05))
-
-            ax.set(
-                xlabel="%s" % para_names[para][I[0]],
-                ylabel="PDF")
-            
-            ax.grid(True)
+                l = [x for m in ["prior", "post"] for x in support[para][m][I[0]]]
                 
-            for m in ["prior", "post"]:
-                for j, prior in enumerate(list_priors):
-                    d = disc[m][j]
+                ax.set(xlim=(min(l), max(l)))
+    
+                ax.set(
+                    xlabel="%s" % para_names[para][I[0]],
+                    ylabel="PDF")
+                
+                ax.grid(True)
                     
-                    # If there is no MCMC or analytic marginal
-                    if d is None:
-                        continue
+                for m in ["prior", "post"]:
+                    for j, prior in enumerate(list_priors):
+                        d = disc[m][j]
+                        
+                        # If there is no MCMC or analytic marginal
+                        if d is None:
+                            continue
+                        
+                        if len(I) == 1:
+                            # Univariate
+                            ax.plot(
+                                d["X"][0],
+                                d["Y"],
+                                pal[prior.colour],
+                                linestyle=linestyle[m])
+                
+                # Joining plots together
+                fig.subplots_adjust(hspace=0)
+                plt.setp(
+                    [a.get_xticklabels() for a in fig.axes[:-1]],
+                    visible=False)
+                
+                if save:
+                    plt.savefig(
+                        "%s/plots/%s-%s-%s-%s-marg.pdf" % (
+                            save_path,
+                            list_priors[0].inst_name,
+                            para,
+                            ["uni", "bi"][floor(i / 3)],
+                            i - floor(i / 3) * 3),
+                        bbox_inches="tight")
+                plt.show()
+                
+            else:
+                # Bivariate
+                
+                for m in ["prior", "post"]:
+                    for j, prior in enumerate(list_priors):
+                        d = disc[m][j]
+                        
+                        # If there is no MCMC or analytic marginal
+                        if d is None:
+                            continue
                     
-                    if len(I) == 1:
-                        # Univariate
-                        ax.plot(
-                            d["X"][0],
+                        fig, ax = plt.subplots()
+                        
+                        grid = np.meshgrid(
+                            *d["X"],
+                            indexing="ij")
+                        ax.contour(
+                            *grid,
                             d["Y"],
-                            pal[prior.colour],
-                            linestyle=linestyle[m])
-            
-            # Joining plots together
-            fig.subplots_adjust(hspace=0)
-            plt.setp(
-                [a.get_xticklabels() for a in fig.axes[:-1]],
-                visible=False)
-            
-            if save:
-                plt.savefig(
-                    "%s/plots/%s-%s-%s-%s-marg.pdf" % (
-                        save_path,
-                        list_priors[0].inst_name,
-                        para,
-                        ["uni", "bi"][floor(i / 3)],
-                        i - floor(i / 3) * 3),
-                    bbox_inches="tight")
-            plt.show()
-            
+                            colors=pal[prior.colour])
+                        
+                        # Diagonal shaded area
+                        if para == "q":
+                            diag = [
+                                max([support["q"][m][j][0] for j in I]),
+                                min([support["q"][m][j][1] for j in I])]
+                            
+                            ax.fill_between(
+                                diag,
+                                diag,
+                                diag[0] - 10,
+                                alpha=0.1,
+                                color="k")
+                        
+                        ax.set(
+                            xlim=tuple(support[para][m][I[0]]),
+                            ylim=tuple(support[para][m][I[1]]),
+                            xlabel="%s" % para_names[para][I[0]],
+                            ylabel="%s" % para_names[para][I[1]])
+                    
 
 def plot_return_level(
         list_priors,
@@ -746,25 +781,12 @@ def plot_return_level(
     Plots estimated return level.
     ---------------------------------------------------------------------------
     list_priors: List of PriorTheta.
-    analytic_rl: List [X, Y] of some return level.
+    analytic_rl: List [X, Y] of return level for some theta.
     """
     N = 50
     X = np.logspace(0.0001, 4.0, num=N)
     
-    # Finds maximum y-axis value
-    _max = 0
-    for prior in list_priors:
-        x = np.array([
-            sample_ret_level(prior.post["theta"]["sample"], x)
-            for x in X])[:, 2][-1]
-        if x > _max:
-            _max = x
-        
-    
     fig, ax = plt.subplots(figsize=(14, 9))
-
-    if analytic_rl is not None:
-        ax.plot(*analytic_rl, "k")
         
     for i, prior in enumerate(list_priors):		
         Y = np.array([
@@ -788,9 +810,17 @@ def plot_return_level(
             color=pal[prior.colour],
             linestyle="dashed")
         
-    ax.scatter(*list_priors[0].post["data"].emp_quant, s=10, color="k")
+    if analytic_rl is not None:
+        ax.plot(*analytic_rl, "k")
         
-    ax.set_ylim([0.0, _max * 1.1])   
+    ax.scatter(
+        *list_priors[0].post["data"].emp_quant,
+        s=10,
+        color="k",
+        zorder=10)
+    
+    plt.yscale("log")
+        
     ax.set(xlabel="Return period (years)", ylabel="Return level")
     
     ax.grid()

@@ -44,7 +44,7 @@ data = data.optimal_M(theta[2])
 # Plots fit of annual maxima
 data.set_obs_in_year(365)
 theta_annual = data.theta_annual(theta)
-data.fit_GEV(theta=theta_annual, save=True)
+data.fit_GEV(theta=theta_annual, save=save_all)
 
 # Constructing priors #-------------------------------------------------------#
 #=============================================================================#

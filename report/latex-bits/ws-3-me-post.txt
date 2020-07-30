@@ -1,2 +1,2 @@
-\metro{$\tilde{\mu}^*\sim{\cal N}(\tilde{\mu},1^2)$,\quad$\log\tilde{\sigma}^*\sim{\cal N}(\log\tilde{\sigma},0.5^2)$,\quad$\tilde{\xi}^*\sim{\cal N}(\tilde{\xi},0.3^2)$}{$21$,\quad$0.75$,\quad$0.3$}{$500,\!000$ (after burn-in period of $1,\!000$)}{plots/ws-3-me-post-trace.pdf}{plots/ws-3-me-post-hist.pdf}{$0.159$,\quad$0.202$,\quad$0.184$}{$20.901$,\quad$0.622$,\quad$0.276$}
+\metro{$\tilde{\mu}^*\sim{\cal N}(\tilde{\mu},1^2)$,\quad$\log\tilde{\sigma}^*\sim{\cal N}(\log\tilde{\sigma},0.5^2)$,\quad$\tilde{\xi}^*\sim{\cal N}(\tilde{\xi},0.3^2)$}{$21$,\quad$0.75$,\quad$0.3$}{$500,\!000$ (after burn-in period of $1,\!000$)}{plots/ws-3-me-post-trace.pdf}{plots/ws-3-me-post-hist.pdf}{$0.16$,\quad$0.202$,\quad$0.184$}{$20.9$,\quad$0.62$,\quad$0.277$}
 
